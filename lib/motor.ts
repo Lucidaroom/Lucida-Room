@@ -14,7 +14,8 @@ export type Analysis = {
   elementos?: { nome: string; material: string; cor: string }[];
   verticais?: [number, number, number, number][];
   foco?: number[] | null;
-  arrumar?: { nome: string; acao: string }[];
+  arrumar?: { nome: string; acao: string; caixa?: [number, number, number, number] }[];
+  perguntas?: { pergunta: string; opcoes: string[] }[];
 };
 
 export type Answers = {
@@ -22,7 +23,7 @@ export type Answers = {
   enq: 'manter' | 'verticais' | 'justo' | 'centralizar';
   luz: 'claro' | 'suave' | 'tarde' | 'noite' | 'manter';
   remover: string[];           // nomes vindos de analysis.removiveis
-  estilo?: string; paleta?: string; adicionar?: string[]; densidade?: string; quem?: string;
+  estilo?: string; paleta?: string; adicionar?: string[]; densidade?: string;
   nao_mudar?: string;
   formatos: string[];          // '4:5' | '9:16' | '1:1' | '16:9'
   posicoes?: Record<string, [number, number]>; // item -> ponto marcado na foto (0–1)
@@ -30,9 +31,11 @@ export type Answers = {
   arrumar?: string[];          // ações de arrumação escolhidas (vindas de analysis.arrumar)
   retirar_txt?: string;        // texto livre: o que tirar
   melhorar_txt?: string;       // texto livre: o que arrumar/melhorar
+  respostas?: Record<string, string>; // pergunta da análise -> opção escolhida pelo cliente
+  refs?: string[];             // nomes dos itens que vão como recorte de referência, na ordem
 };
 
-export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura. Analise a foto e responda SOMENTE em JSON com esta forma:
+export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura e um produtor de cena. Analise a foto e responda SOMENTE em JSON com esta forma:
 {"ambiente": "ex.: Sala de jantar",
  "inventario": [{"item":"cadeira de madeira com assento de couro","qtd":6}, ...] (tudo que é fixo ou mobiliário, com contagem exata),
  "materiais": ["piso de madeira em réguas", ...],
@@ -45,7 +48,19 @@ export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura. Analise a
  "elementos": [{"nome":"gavetas inferiores da estante","material":"MDF laqueado","cor":"branco"}, ...] (cada superfície e móvel fixo com material e cor exatos, incluindo paredes, piso, forro, marcenaria, portas e esquadrias),
  "verticais": [[x1,y1,x2,y2], ...] (2 a 4 arestas que no mundo real são verticais e retas — batentes, quinas de parede, laterais de armário, montantes de esquadria —, em coordenadas normalizadas de 0 a 1, com y1 perto do topo e y2 perto da base da aresta; inclua obrigatoriamente a mais próxima da borda esquerda e a mais próxima da borda direita),
  "foco": [x1,y1,x2,y2] (caixa do elemento principal da foto, normalizada 0–1),
- "arrumar": [{"nome":"Geladeira desalinhada","acao":"empurrar a geladeira para trás até alinhar a frente com a marcenaria, porta fechada"}, ...] (tudo o que um produtor de fotografia arrumaria antes do clique usando só o que já existe: eletrodomésticos fora de posição, portas e gavetas abertas, cadeiras desalinhadas, almofadas e cortinas desarrumadas, tapetes tortos, objetos fora do lugar; 'acao' descreve a arrumação exata, sem acrescentar nada novo)}`;
+ "arrumar": [{"nome":"Geladeira fora do nicho","acao":"empurrar a geladeira para dentro do nicho até a frente alinhar com a marcenaria, porta fechada","caixa":[x1,y1,x2,y2]}, ...],
+ "perguntas": [{"pergunta":"A geladeira deve ficar embutida no nicho?","opcoes":["Sim, embutir no nicho","Não, manter onde está"]}, ...]}
+
+Regras para "arrumar": liste tudo o que um produtor de fotografia arrumaria antes do clique usando só o que já existe na cena, sem acrescentar, trocar ou inventar nada. Percorra obrigatoriamente este checklist, item por item, e só deixe de fora o que de fato não existe na foto:
+1) eletrodomésticos e móveis fora de posição: geladeira, fogão, lava-louças, micro-ondas, forno, máquina de lavar ou armário que esteja saliente, recuado, torto ou fora do nicho/vão onde deveria estar embutido ou alinhado com a marcenaria;
+2) portas, gavetas, janelas e tampas abertas ou entreabertas;
+3) cadeiras, banquetas, mesas e tapetes desalinhados, tortos ou dobrados;
+4) almofadas, mantas, cortinas e roupa de cama amassadas, caídas ou mal distribuídas;
+5) objetos, utensílios, fios, cabos, adesivos, ímãs e etiquetas fora do lugar ou colados onde não deveriam;
+6) frestas, desníveis e peças visivelmente tortas ou desencontradas entre si.
+Cada item traz "acao" com a arrumação exata e "caixa" com a caixa delimitadora do item na foto, normalizada de 0 a 1 ([x1,y1,x2,y2], canto superior esquerdo e canto inferior direito).
+
+Regras para "perguntas": até 3 dúvidas cuja resposta muda o resultado da edição — sempre sobre decisões que você não consegue deduzir sozinho da foto (se um elemento fora de posição deve ser reposicionado, se algo aparentemente provisório fica ou sai, se uma abertura fica aberta ou fechada). Cada pergunta é curta, em português, e traz de 2 a 3 opções objetivas e excludentes. Se não houver dúvida real, devolva lista vazia.`;
 
 const LUZ: Record<Answers['luz'], string> = {
   claro: 'dia claro, luz natural abundante entrando pelas aberturas existentes, sombras suaves e coerentes com as janelas',
@@ -65,6 +80,12 @@ function cameraBlock(_a: Answers) {
   return 'Mesmo tamanho, proporção, ponto de vista e enquadramento da IMAGEM 1, pixel a pixel: não mude a câmera, não gire, não amplie, não recorte e não complete bordas — o prumo e o recorte são feitos depois, fora da IA.';
 }
 
+// Índice da primeira imagem de referência (recortes), na mesma ordem que a rota monta as imagens.
+export function refBase(a: Answers) {
+  const marcados = (a.adicionar || []).filter(i => (a.posicoes || {})[i]);
+  return a.svc === 'ambientar' && marcados.length ? 3 : 2;
+}
+
 export function buildPrompt(an: Analysis, a: Answers, ajuste?: string, correcao?: string) {
   const inv = an.inventario.map(i => `${i.qtd} ${i.item}`).join('; ');
   const rem = an.removiveis.filter(r => a.remover.includes(r.nome) || /pessoa|rosto|placa/i.test(r.nome))
@@ -75,24 +96,30 @@ export function buildPrompt(an: Analysis, a: Answers, ajuste?: string, correcao?
   const marcados = itens.filter(i => pos[i]);
   const lado = (x: number) => x < 0.33 ? 'no terço esquerdo' : x > 0.66 ? 'no terço direito' : 'no centro';
   const prof = (y: number) => y > 0.7 ? 'em primeiro plano' : y < 0.45 ? 'ao fundo' : 'no meio do ambiente';
-  const listaItens = itens.map((i, k) => pos[i]
+  const listaItens = itens.map(i => pos[i]
     ? `${i} — exatamente no marcador ${marcados.indexOf(i) + 1} da IMAGEM 2 (${lado(pos[i][0])}, ${prof(pos[i][1])}), apoiado no piso ou na superfície que está sob o marcador`
     : `${i} — em posição coerente com a circulação, sem bloquear portas, gavetas ou passagens`).join('; ');
   const add = amb ? (itens.length
-    ? ` 3) Acrescentar SOMENTE estes itens, um de cada, em escala real, no estilo ${a.estilo}, paleta ${a.paleta}, densidade ${a.densidade}, para ${a.quem}: ${listaItens}. Nenhum outro móvel ou objeto entra.`
+    ? ` 3) Acrescentar SOMENTE estes itens, um de cada, em escala real, no estilo ${a.estilo}, paleta ${a.paleta}, densidade ${a.densidade}: ${listaItens}. Nenhum outro móvel ou objeto entra.`
     : ` 3) Arrumar a cena no estilo ${a.estilo}, paleta ${a.paleta}, sem acrescentar móveis: no máximo objetos pequenos de cena sobre superfícies existentes.`) : '';
   const ajusteTxt = ajuste ? ` ${amb ? 4 : 3}) REGRAS OBRIGATÓRIAS DO CLIENTE, prioridade máxima sobre todo o resto: ${ajuste}.` : '';
   const travas = (an.elementos || []).length ? ` Cores e materiais travados, peça por peça, sem nenhuma troca: ${an.elementos!.map(e => `${e.nome} = ${e.material} ${e.cor}`).join('; ')}.` : '';
   const arr = (an.arrumar || []).filter(x => (a.arrumar || []).includes(x.nome)).map(x => x.acao);
   const pedidos = [a.retirar_txt ? `retirar: ${a.retirar_txt}` : '', a.melhorar_txt ? `arrumar/melhorar: ${a.melhorar_txt}` : ''].filter(Boolean).join('; ');
   const arrTxt = arr.length || pedidos ? ` Arrumação de produção, usando só o que já existe na cena (pode mover, alinhar, fechar e endireitar objetos existentes, sem acrescentar nada): ${[...arr, pedidos].filter(Boolean).join('; ')}.` : '';
+  const dec = Object.entries(a.respostas || {}).filter(([, v]) => v).map(([p, v]) => `${p} → ${v}`).join('; ');
+  const decTxt = dec ? ` Decisões confirmadas pelo cliente, que valem mais que qualquer interpretação sua da foto: ${dec}.` : '';
+  const base = refBase(a);
+  const refs = (a.refs || []);
+  const refTxt = refs.length ? ` ${refs.map((nome, k) => `A IMAGEM ${base + k} é um recorte ampliado de "${nome}" na própria IMAGEM 1`).join('; ')}. Esses recortes existem só como referência de aparência: ao mover, alinhar ou reposicionar esses itens, o modelo, a cor, o acabamento, os puxadores, as alças, as proporções e os detalhes precisam continuar idênticos ao recorte. É proibido substituir a peça por outra parecida.` : '';
   const corr = correcao ? ` A tentativa anterior errou: ${correcao}. Corrija exatamente isso.` : '';
   const neg = an.texturas.length ? ` Nas texturas artesanais (${an.texturas.join(', ')}): sem padrão repetido, sem escamas, sem leques, sem alinhamento, sem direção dominante, mantendo a escala do relevo da IMAGEM 1.` : '';
   const checklist = an.inventario.map(i => `${i.qtd} ${i.item}`).join(', ');
   const revelar = amb ? ' É proibido trocar acabamentos, cores ou materiais do que já existe; só entra o que está listado.' : ' Este é um serviço REVELAR: não acrescente nenhum objeto, móvel, material ou elemento que não exista na IMAGEM 1.';
   const ref2 = amb && marcados.length ? ' A IMAGEM 2 é a mesma foto com marcadores numerados que indicam onde cada item novo deve ficar; use-a só como mapa de posição e não reproduza os marcadores.' : '';
+  const arquitetura = ' A arquitetura é intocável: paredes, painéis, portas, janelas, forro, piso e revestimentos nunca mudam de material, de cor, de desenho nem de posição, e nenhum deles ganha ou perde elementos — nenhuma parede lisa vira painel ripado ou de madeira, nenhum painel vira parede lisa, nenhuma porta, nicho, prateleira, viga ou moldura é criada ou apagada. Nenhum móvel, eletrodoméstico, luminária, louça ou metal é substituído por outro modelo: o que for movido ou alinhado continua sendo exatamente a mesma peça da IMAGEM 1, com o mesmo formato, a mesma cor, o mesmo acabamento e os mesmos puxadores.';
 
-  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; arquitetura, móveis, objetos e materiais são mantidos da IMAGEM 1, mas a luz, a cor e o acabamento fotográfico devem ser refeitos por inteiro: o resultado precisa parecer uma fotografia profissional de arquitetura, nitidamente superior à foto de celular.${revelar}${ref2}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)} Alterações: 1) Luz: ${LUZ[a.luz]}. Tratamento fotográfico: ${TRAT[a.intensidade || 'editorial']}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${arrTxt}${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; texto inalterado. Qualquer não, refaça.
+  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; arquitetura, móveis, objetos e materiais são mantidos da IMAGEM 1, mas a luz, a cor e o acabamento fotográfico devem ser refeitos por inteiro: o resultado precisa parecer uma fotografia profissional de arquitetura, nitidamente superior à foto de celular.${revelar}${arquitetura}${ref2}${refTxt}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)}${decTxt} Alterações: 1) Luz: ${LUZ[a.luz]}. Tratamento fotográfico: ${TRAT[a.intensidade || 'editorial']}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${arrTxt}${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; nenhum móvel ou eletrodoméstico trocado de modelo; nenhuma parede, painel, porta, janela, forro ou piso com material, desenho ou elementos diferentes da IMAGEM 1; texto inalterado. Qualquer não, refaça.
 
 QUALIDADE MÁXIMA: saída com nitidez igual ou superior à IMAGEM 1, sem embaçamento, sem suavização plástica e sem ruído de compressão, com tudo em foco do primeiro plano ao fundo. É de extrema importância que a qualidade não se perca nesta geração. Texturas que precisam sair nítidas e individualizadas: ${[...an.texturas, ...an.materiais].join(', ')}. A cor fica travada na IMAGEM 1 como referência absoluta: ${an.cores_principais.join(', ')}. Ponto neutro declarado: ${an.ponto_neutro} é ${an.ponto_neutro_tom} neutro, sem dominante azul, verde, rosa ou magenta. Teste binário antes de entregar: o ponto neutro está neutro, sim ou não? A cor principal está idêntica à IMAGEM 1, sim ou não? As texturas listadas estão nítidas, sim ou não? Qualquer não, refaça.`;
 }
@@ -100,13 +127,17 @@ QUALIDADE MÁXIMA: saída com nitidez igual ou superior à IMAGEM 1, sem embaça
 export const FINAL_4K_PROMPT = `Reproduza a IMAGEM 1 em resolução 4K, idêntica em enquadramento, objetos, cores, luz e composição. Não altere, não acrescente e não remova nada. QUALIDADE MÁXIMA: nitidez igual ou superior à IMAGEM 1, sem embaçamento, sem suavização plástica, sem ruído de compressão, texturas individualizadas, cor idêntica à IMAGEM 1, ponto neutro sem dominante azul, verde, rosa ou magenta.`;
 
 export function checkPrompt(an: Analysis, svc: string) {
-  return `IMAGEM 1 é a foto original; IMAGEM 2 é o resultado editado (${svc}). Compare e responda SOMENTE em JSON:
+  return `IMAGEM 1 é a foto original; IMAGEM 2 é o resultado editado (${svc}). Compare as duas com rigor e responda SOMENTE em JSON:
 {"cor_desviada": true/false (IMAGEM 2 ficou mais rosada, magenta ou amarelada que a original),
  "menos_nitida": true/false,
  "contagem_ok": true/false (inventário esperado: ${an.inventario.map(i => `${i.qtd} ${i.item}`).join('; ')}),
  "objeto_nao_pedido": true/false ${svc === 'revelar' ? '(qualquer objeto novo conta)' : '(só objetos fora da lista de decoração)'},
  "pessoa_visivel": true/false,
- "ponto_fraco": "uma frase curta ou null"}`;
+ "modelo_trocado": true/false (algum móvel, eletrodoméstico, luminária, louça ou metal da IMAGEM 1 virou outro modelo, outro formato, outra cor, outro acabamento ou outros puxadores na IMAGEM 2, inclusive quando a peça foi movida de lugar),
+ "arquitetura_alterada": true/false (alguma parede, painel, porta, janela, forro, piso ou revestimento mudou de material, cor ou desenho, ou ganhou/perdeu elementos como ripado, painel de madeira, nicho, prateleira, viga ou moldura; também conta se parte de um móvel fixo ou da marcenaria sumiu ou foi cortada),
+ "enquadramento_alterado": true/false (a IMAGEM 2 tem outro ponto de vista, outro recorte, outro zoom ou bordas completadas em relação à IMAGEM 1),
+ "ponto_fraco": "uma frase curta dizendo o erro mais grave, ou null"}`;
 }
 
-export const passed = (c: any) => c && !c.cor_desviada && !c.menos_nitida && c.contagem_ok && !c.objeto_nao_pedido && !c.pessoa_visivel;
+export const passed = (c: any) => c && !c.cor_desviada && !c.menos_nitida && c.contagem_ok && !c.objeto_nao_pedido
+  && !c.pessoa_visivel && !c.modelo_trocado && !c.arquitetura_alterada && !c.enquadramento_alterado;
