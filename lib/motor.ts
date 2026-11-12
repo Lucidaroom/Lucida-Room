@@ -14,6 +14,7 @@ export type Analysis = {
   elementos?: { nome: string; material: string; cor: string }[];
   verticais?: [number, number, number, number][];
   foco?: number[] | null;
+  arrumar?: { nome: string; acao: string }[];
 };
 
 export type Answers = {
@@ -25,6 +26,9 @@ export type Answers = {
   nao_mudar?: string;
   formatos: string[];          // '4:5' | '9:16' | '1:1' | '16:9'
   posicoes?: Record<string, [number, number]>; // item -> ponto marcado na foto (0–1)
+  arrumar?: string[];          // ações de arrumação escolhidas (vindas de analysis.arrumar)
+  retirar_txt?: string;        // texto livre: o que tirar
+  melhorar_txt?: string;       // texto livre: o que arrumar/melhorar
 };
 
 export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura. Analise a foto e responda SOMENTE em JSON com esta forma:
@@ -39,7 +43,8 @@ export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura. Analise a
  "qualidade": {"problema": null ou "escura" | "tremida" | "lente 0,5×" | "muito inclinada", "dica": null ou a dica curta para refazer},
  "elementos": [{"nome":"gavetas inferiores da estante","material":"MDF laqueado","cor":"branco"}, ...] (cada superfície e móvel fixo com material e cor exatos, incluindo paredes, piso, forro, marcenaria, portas e esquadrias),
  "verticais": [[x1,y1,x2,y2], ...] (2 a 4 arestas que no mundo real são verticais e retas — batentes, quinas de parede, laterais de armário, montantes de esquadria —, em coordenadas normalizadas de 0 a 1, com y1 perto do topo e y2 perto da base da aresta; inclua obrigatoriamente a mais próxima da borda esquerda e a mais próxima da borda direita),
- "foco": [x1,y1,x2,y2] (caixa do elemento principal da foto, normalizada 0–1)}`;
+ "foco": [x1,y1,x2,y2] (caixa do elemento principal da foto, normalizada 0–1),
+ "arrumar": [{"nome":"Geladeira desalinhada","acao":"empurrar a geladeira para trás até alinhar a frente com a marcenaria, porta fechada"}, ...] (tudo o que um produtor de fotografia arrumaria antes do clique usando só o que já existe: eletrodomésticos fora de posição, portas e gavetas abertas, cadeiras desalinhadas, almofadas e cortinas desarrumadas, tapetes tortos, objetos fora do lugar; 'acao' descreve a arrumação exata, sem acrescentar nada novo)}`;
 
 const LUZ: Record<Answers['luz'], string> = {
   claro: 'dia claro, luz natural abundante entrando pelas aberturas existentes, sombras suaves e coerentes com as janelas',
@@ -71,13 +76,16 @@ export function buildPrompt(an: Analysis, a: Answers, ajuste?: string, correcao?
     : ` 3) Arrumar a cena no estilo ${a.estilo}, paleta ${a.paleta}, sem acrescentar móveis: no máximo objetos pequenos de cena sobre superfícies existentes.`) : '';
   const ajusteTxt = ajuste ? ` ${amb ? 4 : 3}) REGRAS OBRIGATÓRIAS DO CLIENTE, prioridade máxima sobre todo o resto: ${ajuste}.` : '';
   const travas = (an.elementos || []).length ? ` Cores e materiais travados, peça por peça, sem nenhuma troca: ${an.elementos!.map(e => `${e.nome} = ${e.material} ${e.cor}`).join('; ')}.` : '';
+  const arr = (an.arrumar || []).filter(x => (a.arrumar || []).includes(x.nome)).map(x => x.acao);
+  const pedidos = [a.retirar_txt ? `retirar: ${a.retirar_txt}` : '', a.melhorar_txt ? `arrumar/melhorar: ${a.melhorar_txt}` : ''].filter(Boolean).join('; ');
+  const arrTxt = arr.length || pedidos ? ` Arrumação de produção, usando só o que já existe na cena (pode mover, alinhar, fechar e endireitar objetos existentes, sem acrescentar nada): ${[...arr, pedidos].filter(Boolean).join('; ')}.` : '';
   const corr = correcao ? ` A tentativa anterior errou: ${correcao}. Corrija exatamente isso.` : '';
   const neg = an.texturas.length ? ` Nas texturas artesanais (${an.texturas.join(', ')}): sem padrão repetido, sem escamas, sem leques, sem alinhamento, sem direção dominante, mantendo a escala do relevo da IMAGEM 1.` : '';
   const checklist = an.inventario.map(i => `${i.qtd} ${i.item}`).join(', ');
   const revelar = amb ? ' É proibido trocar acabamentos, cores ou materiais do que já existe; só entra o que está listado.' : ' Este é um serviço REVELAR: não acrescente nenhum objeto, móvel, material ou elemento que não exista na IMAGEM 1.';
   const ref2 = amb && marcados.length ? ' A IMAGEM 2 é a mesma foto com marcadores numerados que indicam onde cada item novo deve ficar; use-a só como mapa de posição e não reproduza os marcadores.' : '';
 
-  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; tudo o que não estiver listado nas alterações é copiado da IMAGEM 1 sem reprocessamento.${revelar}${ref2}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)} Alterações: 1) Luz: ${LUZ[a.luz]}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; texto inalterado. Qualquer não, refaça.
+  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; tudo o que não estiver listado nas alterações é copiado da IMAGEM 1 sem reprocessamento.${revelar}${ref2}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)} Alterações: 1) Luz: ${LUZ[a.luz]}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${arrTxt}${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; texto inalterado. Qualquer não, refaça.
 
 QUALIDADE MÁXIMA: saída com nitidez igual ou superior à IMAGEM 1, sem embaçamento, sem suavização plástica e sem ruído de compressão, com tudo em foco do primeiro plano ao fundo. É de extrema importância que a qualidade não se perca nesta geração. Texturas que precisam sair nítidas e individualizadas: ${[...an.texturas, ...an.materiais].join(', ')}. A cor fica travada na IMAGEM 1 como referência absoluta: ${an.cores_principais.join(', ')}. Ponto neutro declarado: ${an.ponto_neutro} é ${an.ponto_neutro_tom} neutro, sem dominante azul, verde, rosa ou magenta. Teste binário antes de entregar: o ponto neutro está neutro, sim ou não? A cor principal está idêntica à IMAGEM 1, sim ou não? As texturas listadas estão nítidas, sim ou não? Qualquer não, refaça.`;
 }
