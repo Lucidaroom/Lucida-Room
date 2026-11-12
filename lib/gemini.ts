@@ -56,9 +56,9 @@ export async function askJSON(prompt: string, images: Buffer[]) {
   return JSON.parse(txt);
 }
 
-export async function editImage(prompt: string, base: Buffer, opts: { size: '2K' | '4K'; aspect?: string }) {
+export async function editImage(prompt: string, base: Buffer | Buffer[], opts: { size: '2K' | '4K'; aspect?: string }) {
   const j = await call(MODEL_IMAGE, {
-    contents: [{ role: 'user', parts: [img(base), { text: prompt }] }],
+    contents: [{ role: 'user', parts: [...(Array.isArray(base) ? base : [base]).map(b => img(b)), { text: prompt }] }],
     generationConfig: {
       responseModalities: ['IMAGE'],
       imageConfig: { imageSize: opts.size, ...(opts.aspect ? { aspectRatio: opts.aspect } : {}) }
