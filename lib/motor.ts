@@ -26,6 +26,7 @@ export type Answers = {
   nao_mudar?: string;
   formatos: string[];          // '4:5' | '9:16' | '1:1' | '16:9'
   posicoes?: Record<string, [number, number]>; // item -> ponto marcado na foto (0–1)
+  intensidade?: 'sutil' | 'editorial' | 'revista';
   arrumar?: string[];          // ações de arrumação escolhidas (vindas de analysis.arrumar)
   retirar_txt?: string;        // texto livre: o que tirar
   melhorar_txt?: string;       // texto livre: o que arrumar/melhorar
@@ -52,6 +53,12 @@ const LUZ: Record<Answers['luz'], string> = {
   tarde: 'fim de tarde, sol baixo e quente entrando apenas pelas aberturas existentes',
   noite: 'noite com as luminárias existentes acesas, sem criar novos pontos de luz',
   manter: 'manter a luz da foto, só equilibrando exposição, cor e contraste'
+};
+
+const TRAT: Record<string, string> = {
+  sutil: 'correção discreta de exposição, cor e nitidez, mantendo o clima da foto',
+  editorial: 'tratamento de fotografia profissional de arquitetura, com diferença evidente à primeira vista: exposição equilibrada como um HDR bem feito (janelas com detalhe e sombras abertas), brancos limpos e neutros, contraste e microcontraste de revista, cores ricas e fiéis aos materiais, luz com direção e profundidade, reflexos naturais em pedras, metais e vidros, aspecto de câmera full-frame com lente de arquitetura',
+  revista: 'look editorial de revista de arquitetura, para impressionar ao lado da original: luz natural marcante entrando pelas aberturas existentes, todas as luminárias, pendentes e fitas de LED existentes acesas e equilibradas com a luz do dia, profundidade com primeiro plano levemente mais escuro e fundo luminoso, contraste rico, brancos limpos, cor sofisticada levemente quente, reflexos e brilhos naturais nos materiais, aspecto de câmera full-frame com lente de arquitetura'
 };
 
 function cameraBlock(_a: Answers) {
@@ -85,7 +92,7 @@ export function buildPrompt(an: Analysis, a: Answers, ajuste?: string, correcao?
   const revelar = amb ? ' É proibido trocar acabamentos, cores ou materiais do que já existe; só entra o que está listado.' : ' Este é um serviço REVELAR: não acrescente nenhum objeto, móvel, material ou elemento que não exista na IMAGEM 1.';
   const ref2 = amb && marcados.length ? ' A IMAGEM 2 é a mesma foto com marcadores numerados que indicam onde cada item novo deve ficar; use-a só como mapa de posição e não reproduza os marcadores.' : '';
 
-  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; tudo o que não estiver listado nas alterações é copiado da IMAGEM 1 sem reprocessamento.${revelar}${ref2}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)} Alterações: 1) Luz: ${LUZ[a.luz]}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${arrTxt}${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; texto inalterado. Qualquer não, refaça.
+  return `Edite a IMAGEM 1, fotografia de celular de ${an.ambiente}, transformando-a em fotografia profissional de arquitetura. A IMAGEM 1 é a autoridade absoluta da arquitetura, dos materiais, das cores e da quantidade de objetos; arquitetura, móveis, objetos e materiais são mantidos da IMAGEM 1, mas a luz, a cor e o acabamento fotográfico devem ser refeitos por inteiro: o resultado precisa parecer uma fotografia profissional de arquitetura, nitidamente superior à foto de celular.${revelar}${ref2}${travas}${corr} Inventário que precisa continuar idêntico: ${inv}. ${cameraBlock(a)} Alterações: 1) Luz: ${LUZ[a.luz]}. Tratamento fotográfico: ${TRAT[a.intensidade || 'editorial']}. 2) Remover, sem sombra e sem marca remanescente: ${rem}; remover também todas as pessoas, rostos (inclusive em reflexos) e placas de veículos.${arrTxt}${add}${ajusteTxt}${neg} Plano de forro único e arestas retas, sem cunhas nem faixas inventadas. Letreiros, placas e textos permanecem como na IMAGEM 1, sem letras novas. Nada entra na foto que não esteja listado. O que não pode mudar de jeito nenhum: ${a.nao_mudar || 'arquitetura, esquadrias, piso, revestimentos e mobiliário fixo'}. Verificação final, responda sim ou não antes de entregar: ${checklist}; nenhuma pessoa, rosto ou placa de veículo visível; enquadramento idêntico ao da IMAGEM 1; nenhum objeto não pedido; texto inalterado. Qualquer não, refaça.
 
 QUALIDADE MÁXIMA: saída com nitidez igual ou superior à IMAGEM 1, sem embaçamento, sem suavização plástica e sem ruído de compressão, com tudo em foco do primeiro plano ao fundo. É de extrema importância que a qualidade não se perca nesta geração. Texturas que precisam sair nítidas e individualizadas: ${[...an.texturas, ...an.materiais].join(', ')}. A cor fica travada na IMAGEM 1 como referência absoluta: ${an.cores_principais.join(', ')}. Ponto neutro declarado: ${an.ponto_neutro} é ${an.ponto_neutro_tom} neutro, sem dominante azul, verde, rosa ou magenta. Teste binário antes de entregar: o ponto neutro está neutro, sim ou não? A cor principal está idêntica à IMAGEM 1, sim ou não? As texturas listadas estão nítidas, sim ou não? Qualquer não, refaça.`;
 }
