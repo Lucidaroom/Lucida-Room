@@ -5,6 +5,7 @@ type Opt = [string, string, string?];
 const SVC: Opt[] = [['revelar', 'Revelar', '1 crédito · a mesma foto, com cara de fotografia. Nada entra.'], ['ambientar', 'Ambientar', '2 créditos · o mesmo espaço, com outra decoração']];
 const ENQ: Opt[] = [['verticais', 'Verticais retas', 'padrão'], ['justo', 'Verticais retas + recorte justo'], ['centralizar', 'Centralizar no elemento principal'], ['manter', 'Manter como está']];
 const GEO: [string, string, any][] = [['Corrigir verticais', 'verticais', { verticais: true, recorte: 'auto', centralizar: false }], ['Recortar mais justo', 'justo', { verticais: true, recorte: 'justo', centralizar: false }], ['Centralizar no principal', 'centralizar', { verticais: true, recorte: 'auto', centralizar: true }], ['Enquadramento original', 'manter', { verticais: false, recorte: 'auto', centralizar: false }]];
+const INT: Opt[] = [['editorial', 'Editorial', 'padrão · foto profissional'], ['revista', 'Revista', 'máximo impacto, luzes acesas'], ['sutil', 'Sutil', 'só correção']];
 const LUZ: Opt[] = [['claro', 'Dia claro'], ['suave', 'Dia suave'], ['tarde', 'Fim de tarde', 'só se a janela recebe esse sol'], ['noite', 'Noite com luzes acesas', 'só luminárias que existem'], ['manter', 'Manter a luz da foto']];
 const ESTILO = ['Contemporâneo', 'Natural/orgânico', 'Escandinavo', 'Industrial', 'Clássico atualizado', 'Praia/litoral', 'Minimalista'];
 const PALETA = ['Clara neutra', 'Neutra quente', 'Terrosa', 'Escura sofisticada', 'Com cor de destaque'];
@@ -13,7 +14,7 @@ const DENS = ['Mínima', 'Equilibrada', 'Completa'];
 const QUEM = ['Casal', 'Família com crianças', 'Pessoa sozinha', 'Hóspede de temporada', 'Clientes do comércio'];
 const FMT = ['4:5', '9:16', '1:1', '16:9'];
 const FMT_N: Record<string, string> = { '4:5': 'Feed 4:5', '9:16': 'Stories 9:16', '1:1': 'Quadrado 1:1', '16:9': 'Site 16:9' };
-const AJ = ['Mais claro', 'Luz mais quente', 'Luz mais fria', 'Tirar mais objetos', 'Menos decoração', 'Mais decoração'];
+const AJ = ['Mais impacto, com cara de revista', 'Acender todas as luzes existentes', 'Mais claro', 'Luz mais quente', 'Luz mais fria', 'Tirar mais objetos', 'Menos decoração', 'Mais decoração'];
 
 function Um({ opts, v, set }: { opts: Opt[]; v: string; set: (x: string) => void }) {
   return <div className="chips">{opts.map(([k, l, d]) => <button key={k} type="button" className="chip" aria-pressed={v === k} onClick={() => set(k)} title={d}>{l}{d ? <small style={{ opacity: .7 }}> · {d}</small> : null}</button>)}</div>;
@@ -41,7 +42,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const fixos = removiveis.filter(n => /pessoa|rosto|placa/i.test(n));
   const arrumaveis: string[] = (an.arrumar || []).map((r: any) => r.nome);
   const [a, setA] = useState<any>(photo.answers || {
-    svc: 'revelar', enq: 'verticais', luz: 'suave', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
+    svc: 'revelar', enq: 'verticais', luz: 'suave', intensidade: 'editorial', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
     arrumar: arrumaveis, retirar_txt: '', melhorar_txt: '', adicionar: [], posicoes: {}, densidade: 'Equilibrada', quem: 'Família com crianças', nao_mudar: '', formatos: ['4:5', '9:16']
   });
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
@@ -97,6 +98,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             <div className="mono" style={{ textTransform: 'none', letterSpacing: 0 }}>Já marcamos o que a análise sugere. Confirme ou troque.</div>
             <div className="q"><b>Serviço</b><Um opts={SVC} v={a.svc} set={up('svc')} /></div>
             <div className="q"><b>Enquadramento</b><small>O prumo é corrigido com precisão, sem inventar nada nas bordas: a foto é levemente recortada.</small><Um opts={ENQ} v={a.enq} set={up('enq')} /></div>
+            <div className="q"><b>Transformação</b><small>Quanto a foto muda em luz, cor e acabamento. Arquitetura e materiais ficam iguais.</small><Um opts={INT} v={a.intensidade || 'editorial'} set={up('intensidade')} /></div>
             <div className="q"><b>Luz</b><Um opts={LUZ} v={a.luz} set={up('luz')} /></div>
             <div className="q"><b>O que sai da foto</b><small>Pessoas, rostos e placas de carro saem sempre.</small>
               {removiveis.length ? <Varios opts={removiveis} v={a.remover} set={up('remover')} fixos={fixos} /> : <small>Nada a remover encontrado.</small>}</div>
