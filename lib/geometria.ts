@@ -51,11 +51,53 @@ function planejar(linhas: Linha[]) {
   const src: P[] = [[xNa(L, 0), 0], [xNa(L, 1), 1], [xNa(R, 0), 0], [xNa(R, 1), 1]];
   const dst: P[] = [[xl, 0], [xl, 1], [xr, 0], [xr, 1]];
   // correção exagerada indica linha mal detectada: não mexe
-  if (src.some((s, i) => Math.abs(s[0] - dst[i][0]) > 0.22)) return null;
+  if (src.some((s, i) => Math.abs(s[0] - dst[i][0]) > 0.3)) return null;
   return { fwd: homografia(src, dst), inv: homografia(dst, src) };
 }
 
-export async function aplicarGeometria(buf: Buffer, linhas: Linha[], foco: number[] | null, geo: Geo) {
+// Detecta por código a inclinação das arestas verticais (bordas de móveis, batentes,
+// quinas): para cada pixel de borda quase vertical mede o desvio, e ajusta
+// desvio = a + b·x (a = giro da câmera, b = câmera apontada para cima/baixo).
+// Devolve duas linhas sintéticas (esquerda e direita) para a correção.
+export async function detectarVerticais(buf: Buffer): Promise<Linha[] | null> {
+  const { data, info } = await sharp(buf).greyscale().resize({ width: 800 }).raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height;
+  const xs: number[] = [], ph: number[] = [], ws: number[] = [];
+  for (let y = 2; y < H - 2; y += 1) for (let x = 2; x < W - 2; x += 1) {
+    const i = y * W + x;
+    const gx = -data[i - W - 1] - 2 * data[i - 1] - data[i + W - 1] + data[i - W + 1] + 2 * data[i + 1] + data[i + W + 1];
+    const gy = -data[i - W - 1] - 2 * data[i - W] - data[i - W + 1] + data[i + W - 1] + 2 * data[i + W] + data[i + W + 1];
+    const m = Math.hypot(gx, gy);
+    if (m < 120 || Math.abs(gx) < 3 * Math.abs(gy)) continue;       // só bordas quase verticais e fortes
+    const phi = Math.atan(gy / gx);                                   // desvio da vertical (rad)
+    if (Math.abs(phi) > 0.26) continue;                               // até ~15°
+    xs.push(x / W - 0.5); ph.push(phi); ws.push(m);
+  }
+  if (xs.length < 400) return null;
+  let a = 0, b = 0;
+  for (let it = 0; it < 4; it++) {                                    // regressão ponderada com corte de outliers
+    let S = 0, Sx = 0, Sy = 0, Sxx = 0, Sxy = 0;
+    for (let k = 0; k < xs.length; k++) {
+      const r = ph[k] - (a + b * xs[k]);
+      if (it > 0 && Math.abs(r) > 0.05) continue;
+      const w = ws[k];
+      S += w; Sx += w * xs[k]; Sy += w * ph[k]; Sxx += w * xs[k] * xs[k]; Sxy += w * xs[k] * ph[k];
+    }
+    const den = S * Sxx - Sx * Sx;
+    if (S === 0 || Math.abs(den) < 1e-9) return null;
+    b = (S * Sxy - Sx * Sy) / den; a = (Sy - b * Sx) / S;
+  }
+  const ar = H / W;
+  const linha = (xn: number): Linha => {
+    const t = Math.tan(a + b * (xn - 0.5));
+    return [xn + t * 0.5 * ar, 0, xn - t * 0.5 * ar, 1];
+  };
+  return [linha(0.1), linha(0.9)];
+}
+
+export async function aplicarGeometria(buf: Buffer, linhasIA: Linha[], foco: number[] | null, geo: Geo) {
+  let linhas = linhasIA;
+  if (geo.verticais) { try { linhas = (await detectarVerticais(buf)) || linhasIA; } catch {} }
   const img = sharp(buf).removeAlpha();
   const { data, info } = await img.raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
