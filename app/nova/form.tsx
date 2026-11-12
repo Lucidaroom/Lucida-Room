@@ -41,8 +41,9 @@ export default function NovaForm({ projetos, termoJaAceito }: { projetos: { id: 
       setEstado(`Enviando e analisando ${i + 1} de ${files.length}…`);
       const fd = new FormData();
       fd.append('file', jpg, 'foto.jpg'); fd.append('project_id', proj); fd.append('project_name', nome); fd.append('termo', termo ? '1' : '0');
-      const r = await fetch('/api/analisar', { method: 'POST', body: fd });
-      const j = await r.json();
+      let r: Response, j: any;
+      try { r = await fetch('/api/analisar', { method: 'POST', body: fd }); j = await r.json(); }
+      catch { setEstado(''); setErro('O envio demorou demais ou caiu. Tente de novo em instantes.'); return; }
       if (!r.ok) { setEstado(''); setErro(j.error || 'Falha no envio.'); return; }
       ids.push(j.id);
       if (proj === 'novo') setProj(j.project_id);
