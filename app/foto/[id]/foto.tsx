@@ -39,9 +39,10 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const an = photo.analysis || {};
   const removiveis: string[] = (an.removiveis || []).map((r: any) => r.nome);
   const fixos = removiveis.filter(n => /pessoa|rosto|placa/i.test(n));
+  const arrumaveis: string[] = (an.arrumar || []).map((r: any) => r.nome);
   const [a, setA] = useState<any>(photo.answers || {
     svc: 'revelar', enq: 'verticais', luz: 'suave', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
-    adicionar: [], posicoes: {}, densidade: 'Equilibrada', quem: 'Família com crianças', nao_mudar: '', formatos: ['4:5', '9:16']
+    arrumar: arrumaveis, retirar_txt: '', melhorar_txt: '', adicionar: [], posicoes: {}, densidade: 'Equilibrada', quem: 'Família com crianças', nao_mudar: '', formatos: ['4:5', '9:16']
   });
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
   const [ver, setVer] = useState(versions.length ? versions[versions.length - 1].n : 0);
@@ -99,6 +100,11 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             <div className="q"><b>Luz</b><Um opts={LUZ} v={a.luz} set={up('luz')} /></div>
             <div className="q"><b>O que sai da foto</b><small>Pessoas, rostos e placas de carro saem sempre.</small>
               {removiveis.length ? <Varios opts={removiveis} v={a.remover} set={up('remover')} fixos={fixos} /> : <small>Nada a remover encontrado.</small>}</div>
+            <div className="q"><b>O que arrumar</b><small>Como um produtor de fotografia faria antes do clique: alinhar, fechar, endireitar e reposicionar o que já existe.</small>
+              {arrumaveis.length ? <Varios opts={arrumaveis} v={a.arrumar || []} set={up('arrumar')} /> : <small>Nada fora do lugar encontrado.</small>}</div>
+            <div className="q"><b>Quer pedir mais alguma coisa?</b><small>Opcional. Escreva do seu jeito.</small>
+              <label className="f">O que tirar da foto<input type="text" placeholder="ex.: o balde amarelo, o pano sobre a ilha, os ímãs da geladeira" value={a.retirar_txt || ''} onChange={e => up('retirar_txt')(e.target.value)} /></label>
+              <label className="f">O que arrumar ou melhorar<input type="text" placeholder="ex.: alinhar a geladeira com o armário, fechar a porta do forno" value={a.melhorar_txt || ''} onChange={e => up('melhorar_txt')(e.target.value)} /></label></div>
             {amb && <>
               <div className="q"><b>Estilo</b><Um opts={ESTILO.map(x => [x, x])} v={a.estilo} set={up('estilo')} /></div>
               <div className="q"><b>Paleta</b><Um opts={PALETA.map(x => [x, x])} v={a.paleta} set={up('paleta')} /></div>
