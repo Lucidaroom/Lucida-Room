@@ -1,4 +1,5 @@
 // Chamadas diretas à API do Gemini (sem SDK).
+import sharp from 'sharp';
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 export const MODEL_IMAGE = process.env.GEMINI_IMAGE_MODEL || 'gemini-3-pro-image-preview'; // Nano Banana Pro
 export const MODEL_TEXT = process.env.GEMINI_TEXT_MODEL || 'gemini-3.8-flash';           // análise e checagem
@@ -47,11 +48,15 @@ async function call(models: string | string[], body: any, budget = 60000, perTry
 
 const img = (buf: Buffer, mime = 'image/jpeg'): Part => ({ inlineData: { mimeType: mime, data: buf.toString('base64') } });
 
+// imagem reduzida para a análise: mais rápida e suficiente para ler a cena
+const reduz = (b: Buffer) => sharp(b).resize({ width: 1280, height: 1280, fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
+
 export async function askJSON(prompt: string, images: Buffer[]) {
+  const small = await Promise.all(images.map(reduz));
   const j = await call(TEXT_MODELS, {
-    contents: [{ role: 'user', parts: [...images.map(b => img(b)), { text: prompt }] }],
+    contents: [{ role: 'user', parts: [...small.map(b => img(b)), { text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-  }, 45000, 20000);
+  }, 95000, 55000);
   const txt = j.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '{}';
   return JSON.parse(txt);
 }
