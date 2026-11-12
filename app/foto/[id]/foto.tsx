@@ -3,7 +3,8 @@ import { useRef, useState } from 'react';
 
 type Opt = [string, string, string?];
 const SVC: Opt[] = [['revelar', 'Revelar', '1 crédito · a mesma foto, com cara de fotografia. Nada entra.'], ['ambientar', 'Ambientar', '2 créditos · o mesmo espaço, com outra decoração']];
-const ENQ: Opt[] = [['manter', 'Manter'], ['verticais', 'Verticais retas'], ['frontal', 'Frontal simétrico'], ['melhor', 'Melhor enquadramento']];
+const ENQ: Opt[] = [['verticais', 'Verticais retas', 'padrão'], ['justo', 'Verticais retas + recorte justo'], ['centralizar', 'Centralizar no elemento principal'], ['manter', 'Manter como está']];
+const GEO: [string, string, any][] = [['Corrigir verticais', 'verticais', { verticais: true, recorte: 'auto', centralizar: false }], ['Recortar mais justo', 'justo', { verticais: true, recorte: 'justo', centralizar: false }], ['Centralizar no principal', 'centralizar', { verticais: true, recorte: 'auto', centralizar: true }], ['Enquadramento original', 'manter', { verticais: false, recorte: 'auto', centralizar: false }]];
 const LUZ: Opt[] = [['claro', 'Dia claro'], ['suave', 'Dia suave'], ['tarde', 'Fim de tarde', 'só se a janela recebe esse sol'], ['noite', 'Noite com luzes acesas', 'só luminárias que existem'], ['manter', 'Manter a luz da foto']];
 const ESTILO = ['Contemporâneo', 'Natural/orgânico', 'Escandinavo', 'Industrial', 'Clássico atualizado', 'Praia/litoral', 'Minimalista'];
 const PALETA = ['Clara neutra', 'Neutra quente', 'Terrosa', 'Escura sofisticada', 'Com cor de destaque'];
@@ -40,12 +41,25 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const fixos = removiveis.filter(n => /pessoa|rosto|placa/i.test(n));
   const [a, setA] = useState<any>(photo.answers || {
     svc: 'revelar', enq: 'verticais', luz: 'suave', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
-    adicionar: ['Plantas', 'Objetos de mesa e bancada'], densidade: 'Equilibrada', quem: 'Família com crianças', nao_mudar: '', formatos: ['4:5', '9:16']
+    adicionar: [], posicoes: {}, densidade: 'Equilibrada', quem: 'Família com crianças', nao_mudar: '', formatos: ['4:5', '9:16']
   });
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
   const [ver, setVer] = useState(versions.length ? versions[versions.length - 1].n : 0);
   const [busy, setBusy] = useState(''); const [erro, setErro] = useState(''); const [aviso, setAviso] = useState('');
   const [aj, setAj] = useState<string[]>([]); const [ajTxt, setAjTxt] = useState('');
+  const [posItem, setPosItem] = useState(''); const [arquivos, setArquivos] = useState<{ nome: string; url: string }[]>([]);
+  const marcar = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!posItem) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    setA({ ...a, posicoes: { ...(a.posicoes || {}), [posItem]: [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height] } });
+    const prox = (a.adicionar || []).find((i: string) => i !== posItem && !(a.posicoes || {})[i]); setPosItem(prox || '');
+  };
+  const enquadrar = async (geo: any) => {
+    setErro(''); setBusy('Ajustando prumo e recorte… alguns segundos.');
+    const r = await fetch('/api/enquadrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ photo_id: photo.id, n: ver, geo }) });
+    const j = await r.json().catch(() => ({ error: 'Falha no ajuste.' })); setBusy('');
+    if (!r.ok) return setErro(j.error); location.reload();
+  };
   const amb = a.svc === 'ambientar';
   const proxima = fila ? fila.split(',') : [];
 
@@ -61,7 +75,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
     const r = await fetch(`/api/baixar/${photo.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: ver }) });
     const j = await r.json(); setBusy('');
     if (!r.ok) return setErro(j.error === 'liberar' ? 'Esta é uma prévia grátis. Para baixar em alta resolução, libere a foto com créditos (compra disponível na próxima etapa).' : j.error);
-    location.href = j.url;
+    setArquivos(j.arquivos || []);
   };
 
   // ——— questionário ———
@@ -72,19 +86,24 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
         <div className="mono">Nova foto · passo 2 e 3</div>
         <h1>{an.ambiente || 'Sua foto'}</h1>
         <div className="split">
-          <img src={original} alt="Foto enviada" style={{ width: '100%', borderRadius: 8 }} />
+          <div style={{ position: 'relative', cursor: posItem ? 'crosshair' : 'default' }} onClick={marcar}>
+            <img src={original} alt="Foto enviada" style={{ width: '100%', borderRadius: 8, display: 'block' }} />
+            {amb && (a.adicionar || []).filter((i: string) => (a.posicoes || {})[i]).map((i: string, k: number) => { const [x, y] = a.posicoes[i]; return <span key={i} title={i} style={{ position: 'absolute', left: `${x * 100}%`, top: `${y * 100}%`, transform: 'translate(-50%,-50%)', background: '#E0115F', color: '#fff', border: '2px solid #fff', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>{k + 1}</span>; })}
+            {posItem && <span className="lbl" style={{ left: 10 }}>TOQUE ONDE VAI: {posItem.toUpperCase()}</span>}
+          </div>
           <div className="stack">
             {an.qualidade?.problema && <div className="alert">Essa foto está {an.qualidade.problema}. O resultado pode ter falhas. Para um resultado melhor, refaça {an.qualidade.dica ? `com ${an.qualidade.dica}` : 'a foto'}. Você pode gerar mesmo assim.</div>}
             <div className="mono" style={{ textTransform: 'none', letterSpacing: 0 }}>Já marcamos o que a análise sugere. Confirme ou troque.</div>
             <div className="q"><b>Serviço</b><Um opts={SVC} v={a.svc} set={up('svc')} /></div>
-            <div className="q"><b>Enquadramento</b><small>Nada é completado nas bordas. Se faltar parede ou piso, a foto é recortada.</small><Um opts={ENQ} v={a.enq} set={up('enq')} /></div>
+            <div className="q"><b>Enquadramento</b><small>O prumo é corrigido com precisão, sem inventar nada nas bordas: a foto é levemente recortada.</small><Um opts={ENQ} v={a.enq} set={up('enq')} /></div>
             <div className="q"><b>Luz</b><Um opts={LUZ} v={a.luz} set={up('luz')} /></div>
             <div className="q"><b>O que sai da foto</b><small>Pessoas, rostos e placas de carro saem sempre.</small>
               {removiveis.length ? <Varios opts={removiveis} v={a.remover} set={up('remover')} fixos={fixos} /> : <small>Nada a remover encontrado.</small>}</div>
             {amb && <>
               <div className="q"><b>Estilo</b><Um opts={ESTILO.map(x => [x, x])} v={a.estilo} set={up('estilo')} /></div>
               <div className="q"><b>Paleta</b><Um opts={PALETA.map(x => [x, x])} v={a.paleta} set={up('paleta')} /></div>
-              <div className="q"><b>O que adicionar</b><Varios opts={ADD} v={a.adicionar} set={up('adicionar')} /></div>
+              <div className="q"><b>O que adicionar</b><small>Só entra o que você marcar. Depois toque em cada item abaixo e na foto para dizer onde ele fica.</small><Varios opts={ADD} v={a.adicionar} set={(v: string[]) => { setA({ ...a, adicionar: v }); const novo = v.find(i => !(a.adicionar || []).includes(i)); if (novo) setPosItem(novo); }} />
+                {(a.adicionar || []).length > 0 && <div className="chips">{(a.adicionar || []).map((i: string, k: number) => <button key={i} type="button" className="chip" aria-pressed={posItem === i} onClick={() => setPosItem(i)}>{(a.posicoes || {})[i] ? `${k + 1}. ${i} ✓` : `Posicionar ${i}`}</button>)}</div>}</div>
               <div className="q"><b>Quantidade de decoração</b><Um opts={DENS.map(x => [x, x])} v={a.densidade} set={up('densidade')} /></div>
               <div className="q"><b>Para quem é o espaço</b><Um opts={QUEM.map(x => [x, x])} v={a.quem} set={up('quem')} /></div>
             </>}
@@ -119,9 +138,12 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
           <div className="chips">{versions.map((v: any) => <button key={v.n} className="chip" aria-pressed={v.n === ver} onClick={() => setVer(v.n)}>v{v.n}</button>)}</div>
         </div>
         <div className="stack">
-          {atual.check && (atual.check.ponto_fraco && (atual.check.cor_desviada || atual.check.menos_nitida || !atual.check.contagem_ok || atual.check.objeto_nao_pedido || !atual.check.verticais_retas)
+          {atual.check && (atual.check.ponto_fraco && (atual.check.cor_desviada || atual.check.menos_nitida || !atual.check.contagem_ok || atual.check.objeto_nao_pedido)
             ? <div className="alert">Esta foto teve dificuldade em: {atual.check.ponto_fraco}. Um ajuste pode resolver.</div>
-            : <div className="ok">Checagem: cor, nitidez, contagem e verticais aprovadas.</div>)}
+            : <div className="ok">Checagem: cor, nitidez e contagem aprovadas.</div>)}
+          <div className="card"><b>Prumo e enquadramento</b><small>Sem custo e sem IA: refeito em segundos sobre a versão escolhida.</small>
+            <div className="chips">{GEO.map(([l, k, g]) => <button key={k} className="chip" disabled={!!busy} onClick={() => enquadrar(g)}>{l}</button>)}</div>
+          </div>
           <div className="card"><b>Ajustar</b>
             <small>{photo.is_trial && !saldo.admin ? 'Ajustes ficam disponíveis depois de liberar a foto.' : restantes ? `${restantes} ajuste${restantes > 1 ? 's' : ''} grátis restante${restantes > 1 ? 's' : ''}.` : 'Ajustes incluídos usados. Cada ajuste a mais gasta 1 crédito.'}</small>
             <Varios opts={AJ} v={aj} set={setAj} />
@@ -129,8 +151,9 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             <button className="btn sec" disabled={!ajusteTexto || !!busy} onClick={() => gerar(ajusteTexto)}>Gerar ajuste</button>
           </div>
           <div className="card"><b>Entrega</b>
-            <small>Original em 4K{(photo.answers?.formatos || []).length ? ' + ' + photo.answers.formatos.map((f: string) => FMT_N[f]).join(', ') : ''}, em .zip.{photo.service === 'ambientar' ? ' Em anúncio de imóvel, a recomendação é indicar que a decoração é ilustrativa.' : ''}</small>
+            <small>Original em 4K{(photo.answers?.formatos || []).length ? ' + ' + photo.answers.formatos.map((f: string) => FMT_N[f]).join(', ') : ''}, cada um em JPG.{photo.service === 'ambientar' ? ' Em anúncio de imóvel, a recomendação é indicar que a decoração é ilustrativa.' : ''}</small>
             <button className="btn" disabled={!!busy} onClick={baixar}>Aprovar e baixar v{ver}</button>
+            {arquivos.length > 0 && <div className="stack" style={{ gap: 8 }}>{arquivos.map(f => <a key={f.nome} className="btn sec" href={f.url}>Baixar {f.nome}</a>)}</div>}
           </div>
           {erro && <div className="erro">{erro}</div>}
           {busy && <div className="ok">{busy}</div>}
