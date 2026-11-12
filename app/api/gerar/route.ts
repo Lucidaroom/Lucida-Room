@@ -4,8 +4,25 @@ import { editImage, askJSON, nearestAspect } from '@/lib/gemini';
 import { buildPrompt, checkPrompt, passed, type Answers } from '@/lib/motor';
 import { marcaDagua } from '@/lib/imagem';
 import { aplicarGeometria, marcadores, geoDe } from '@/lib/geometria';
+import sharp from 'sharp';
 
 export const maxDuration = 300;
+
+// Recorte ampliado de um item da cena, usado como referência de aparência
+// para o modelo não trocar a peça quando ela é movida ou alinhada.
+async function recorte(buf: Buffer, caixa: [number, number, number, number]) {
+  const m = await sharp(buf).metadata();
+  const W = m.width || 0, H = m.height || 0;
+  if (!W || !H) throw new Error('sem dimensões');
+  const [x1, y1, x2, y2] = caixa;
+  const folga = 0.04;
+  const l = Math.max(0, Math.min(x1, x2) - folga), t = Math.max(0, Math.min(y1, y2) - folga);
+  const r = Math.min(1, Math.max(x1, x2) + folga), b = Math.min(1, Math.max(y1, y2) + folga);
+  const left = Math.round(l * W), top = Math.round(t * H);
+  const width = Math.max(32, Math.round((r - l) * W)), height = Math.max(32, Math.round((b - t) * H));
+  if (left + width > W || top + height > H) throw new Error('caixa fora da imagem');
+  return sharp(buf).extract({ left, top, width, height }).resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: false }).jpeg({ quality: 95 }).toBuffer();
+}
 
 export async function POST(req: Request) {
   const user = await currentUser();
@@ -65,6 +82,16 @@ export async function POST(req: Request) {
     const marc = (answers.adicionar || []).filter(i => pos[i]).map((i, k) => ({ n: k + 1, x: pos[i][0], y: pos[i][1] }));
     if (answers.svc === 'ambientar' && marc.length) imgs.push(await marcadores(orig, marc));
 
+    // recortes de referência dos itens que serão movidos/alinhados
+    const refs: string[] = [];
+    for (const item of (photo.analysis?.arrumar || [])) {
+      if (!item?.caixa || !(answers.arrumar || []).includes(item.nome)) continue;
+      if (refs.length >= 4) break;
+      try { imgs.push(await recorte(orig, item.caixa)); refs.push(item.nome); }
+      catch (e: any) { console.error('[recorte]', item.nome, e.message); }
+    }
+    answers = { ...answers, refs };
+
     let best: { buf: Buffer; check: any } | null = null;
     let correcao: string | undefined;
     let prompt = '';
@@ -78,7 +105,7 @@ export async function POST(req: Request) {
       correcao = check?.ponto_fraco || undefined;
     }
     // prumo e recorte por código, sobre a saída da IA (mesmo enquadramento da original)
-    const geo = geoDe(answers.enq);
+    const geo = body.geo && typeof body.geo === 'object' ? body.geo : geoDe(answers.enq);
     const an = photo.analysis || {};
     let final = best!.buf;
     try { final = await aplicarGeometria(best!.buf, an.verticais || [], an.foco || null, geo); } catch (e: any) { console.error('[geometria]', e.message); }
