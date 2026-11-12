@@ -8,8 +8,9 @@ type Part = { text: string } | { inlineData: { mimeType: string; data: string } 
 const TEXT_MODELS = [MODEL_TEXT, 'gemini-flash-latest', 'gemini-3-flash-preview', 'gemini-2.5-flash-lite'];
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-async function once(model: string, body: any) {
+async function once(model: string, body: any, ms: number) {
   const r = await fetch(`${BASE}/${model}:generateContent`, {
+    signal: AbortSignal.timeout(ms),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY! },
     body: JSON.stringify(body)
@@ -21,16 +22,22 @@ async function once(model: string, body: any) {
 
 // Tenta de novo quando o Google está sobrecarregado (429/500/503) e,
 // se o modelo não existir ou continuar indisponível, passa para o próximo da lista.
-async function call(models: string | string[], body: any) {
+// budget = tempo máximo total (ms) somando todas as tentativas.
+async function call(models: string | string[], body: any, budget = 60000, perTry = 30000) {
   const list = Array.from(new Set(Array.isArray(models) ? models : [models]));
+  const end = Date.now() + budget;
   let last: any;
   for (const m of list) {
-    for (let t = 0; t < 3; t++) {
-      try { return await once(m, body); }
+    for (let t = 0; t < 2; t++) {
+      const left = end - Date.now();
+      if (left < 3000) throw last || new Error('A IA demorou demais para responder.');
+      try { return await once(m, body, Math.min(perTry, left)); }
       catch (e: any) {
         last = e;
+        console.error('[gemini]', m, e.status || e.name, e.message);
         if (e.status === 404 || e.status === 400) break;               // modelo inexistente: próximo
-        if ([429, 500, 503].includes(e.status)) { await sleep(1500 * (t + 1)); continue; }
+        if ([429, 500, 503].includes(e.status)) { await sleep(1500); continue; }
+        if (e.name === 'TimeoutError') break;                           // lento: tenta o próximo modelo
         throw e;
       }
     }
@@ -44,7 +51,7 @@ export async function askJSON(prompt: string, images: Buffer[]) {
   const j = await call(TEXT_MODELS, {
     contents: [{ role: 'user', parts: [...images.map(b => img(b)), { text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-  });
+  }, 45000, 20000);
   const txt = j.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '{}';
   return JSON.parse(txt);
 }
@@ -56,7 +63,7 @@ export async function editImage(prompt: string, base: Buffer, opts: { size: '2K'
       responseModalities: ['IMAGE'],
       imageConfig: { imageSize: opts.size, ...(opts.aspect ? { aspectRatio: opts.aspect } : {}) }
     }
-  });
+  }, 150000, 120000);
   const part = j.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
   if (!part) throw new Error('A IA não devolveu imagem. ' + (j.candidates?.[0]?.finishReason || ''));
   return Buffer.from(part.inlineData.data, 'base64');
