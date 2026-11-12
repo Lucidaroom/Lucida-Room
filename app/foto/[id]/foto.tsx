@@ -47,7 +47,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
   const [ver, setVer] = useState(versions.length ? versions[versions.length - 1].n : 0);
   const [busy, setBusy] = useState(''); const [erro, setErro] = useState(''); const [aviso, setAviso] = useState('');
-  const [aj, setAj] = useState<string[]>([]); const [ajTxt, setAjTxt] = useState('');
+  const [aj, setAj] = useState<string[]>([]); const [ajTxt, setAjTxt] = useState(''); const [ajTirar, setAjTirar] = useState(''); const [ajArrumar, setAjArrumar] = useState('');
   const [posItem, setPosItem] = useState(''); const [arquivos, setArquivos] = useState<{ nome: string; url: string }[]>([]);
   const marcar = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!posItem) return;
@@ -103,8 +103,8 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             <div className="q"><b>O que arrumar</b><small>Como um produtor de fotografia faria antes do clique: alinhar, fechar, endireitar e reposicionar o que já existe.</small>
               {arrumaveis.length ? <Varios opts={arrumaveis} v={a.arrumar || []} set={up('arrumar')} /> : <small>Nada fora do lugar encontrado.</small>}</div>
             <div className="q"><b>Quer pedir mais alguma coisa?</b><small>Opcional. Escreva do seu jeito.</small>
-              <label className="f">O que tirar da foto<input type="text" placeholder="ex.: o balde amarelo, o pano sobre a ilha, os ímãs da geladeira" value={a.retirar_txt || ''} onChange={e => up('retirar_txt')(e.target.value)} /></label>
-              <label className="f">O que arrumar ou melhorar<input type="text" placeholder="ex.: alinhar a geladeira com o armário, fechar a porta do forno" value={a.melhorar_txt || ''} onChange={e => up('melhorar_txt')(e.target.value)} /></label></div>
+              <label className="f">O que tirar da foto<input type="text" placeholder="ex.: objetos soltos, itens sobre bancadas e mesas, fios aparentes" value={a.retirar_txt || ''} onChange={e => up('retirar_txt')(e.target.value)} /></label>
+              <label className="f">O que arrumar ou melhorar<input type="text" placeholder="ex.: alinhar móveis e eletrodomésticos, fechar portas e gavetas, endireitar o que estiver torto" value={a.melhorar_txt || ''} onChange={e => up('melhorar_txt')(e.target.value)} /></label></div>
             {amb && <>
               <div className="q"><b>Estilo</b><Um opts={ESTILO.map(x => [x, x])} v={a.estilo} set={up('estilo')} /></div>
               <div className="q"><b>Paleta</b><Um opts={PALETA.map(x => [x, x])} v={a.paleta} set={up('paleta')} /></div>
@@ -131,7 +131,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const atual = versions.find((v: any) => v.n === ver) || versions[versions.length - 1];
   const incluidos = photo.service === 'ambientar' ? 2 : 1;
   const restantes = Math.max(0, incluidos - photo.adjustments_used);
-  const ajusteTexto = [...aj, ajTxt.trim()].filter(Boolean).join('; ');
+  const ajusteTexto = [...aj, ajTirar.trim() ? `retirar: ${ajTirar.trim()}` : '', ajArrumar.trim() ? `arrumar/melhorar: ${ajArrumar.trim()}` : '', ajTxt.trim()].filter(Boolean).join('; ');
   return (
     <div className="stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -153,7 +153,9 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
           <div className="card"><b>Ajustar</b>
             <small>{photo.is_trial && !saldo.admin ? 'Ajustes ficam disponíveis depois de liberar a foto.' : restantes ? `${restantes} ajuste${restantes > 1 ? 's' : ''} grátis restante${restantes > 1 ? 's' : ''}.` : 'Ajustes incluídos usados. Cada ajuste a mais gasta 1 crédito.'}</small>
             <Varios opts={AJ} v={aj} set={setAj} />
-            <input type="text" placeholder="Detalhe (opcional)" value={ajTxt} onChange={e => setAjTxt(e.target.value)} />
+            <label className="f">O que tirar da foto<textarea rows={2} style={{ font: 'inherit', padding: 12, borderRadius: 6, border: '1px solid #5c5852' }} placeholder="ex.: objetos soltos, itens sobre bancadas e mesas, fios aparentes" value={ajTirar} onChange={e => setAjTirar(e.target.value)} /></label>
+            <label className="f">O que arrumar, alinhar ou melhorar<textarea rows={2} style={{ font: 'inherit', padding: 12, borderRadius: 6, border: '1px solid #5c5852' }} placeholder="ex.: alinhar móveis e eletrodomésticos, fechar portas e gavetas, endireitar o que estiver torto" value={ajArrumar} onChange={e => setAjArrumar(e.target.value)} /></label>
+            <input type="text" placeholder="Outro detalhe (opcional)" value={ajTxt} onChange={e => setAjTxt(e.target.value)} />
             <button className="btn sec" disabled={!ajusteTexto || !!busy} onClick={() => gerar(ajusteTexto)}>Gerar ajuste</button>
           </div>
           <div className="card"><b>Entrega</b>
