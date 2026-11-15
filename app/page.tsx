@@ -61,12 +61,12 @@ export default async function Home() {
       <section className="hero2">
         <div className="hero2-txt">
           <h1>Foto de celular.<br />Olhar de arquitetura.</h1>
-          <p className="lead">A foto que você já tirou, com cara de fotografia. Pronta em cerca de <b>1 minuto</b>, a partir de <b>R$ 4,74</b> — feita com IA e conferida por arquiteto.</p>
+          <p className="lead">A foto que você já tirou, com cara de fotografia. Você manda pelo WhatsApp e eu, arquiteto, trato e confiro cada imagem. <b>Revelar em 24 h</b>, a partir de <b>R$ 26,70</b> por foto.</p>
           <div className="row">
-            <Link className="btn" href="/entrar">Testar com 3 fotos grátis</Link>
-            <a className="btn sec" href="#caminhos">Quero que façam por mim</a>
+            <a className="btn" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
+            <a className="btn sec" href="#caminhos">Ver como funciona</a>
           </div>
-          <small className="nota">Sem cartão para testar · nada entra na foto que não exista no imóvel.</small>
+          <small className="nota">A plataforma de autoatendimento está em construção. Por enquanto, todo pedido é feito sob medida · nada entra na foto que não exista no imóvel.</small>
         </div>
         <div className="hero2-img">
           <Provas pares={[destaque]} semAbas />
@@ -104,7 +104,7 @@ export default async function Home() {
         <p className="lead">O mesmo motor de imagem e o mesmo checklist nos dois. A diferença é quem conduz.</p>
         <div className="split">
           <div className="via">
-            <div className="mono">Plataforma · por crédito</div>
+            <div className="mono">Plataforma · em construção</div>
             <h3>Você faz</h3>
             <p className="lead">Sobe a foto, confere a lista do que vai ser feito e baixa o resultado. Ajustes por texto, ali mesmo.</p>
             <ul className="marcas">
@@ -112,7 +112,7 @@ export default async function Home() {
               <li>A partir de R$ 4,74 por foto no plano maior</li>
               <li>3 fotos grátis para testar, sem cartão</li>
             </ul>
-            <Link className="btn" href="/entrar">Começar com 3 fotos grátis</Link>
+            <small>Ainda em construção. Enquanto isso, faça o pedido sob medida.</small>
           </div>
           <div className="via">
             <div className="mono">Sob medida · por foto</div>
@@ -201,8 +201,8 @@ export default async function Home() {
       <section className="fecho">
         <h2>Comece pela foto que você já tem</h2>
         <div className="row">
-          <Link className="btn" href="/entrar">Testar com 3 fotos grátis</Link>
-          <a className="btn sec" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
+          <a className="btn" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
+          <a className="btn sec" href={MAIL}>Por e-mail</a>
         </div>
         <div className="row mono">
           <a href="https://instagram.com/lucidaroom.ia" target="_blank" rel="noopener">@lucidaroom.ia</a>
