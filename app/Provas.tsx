@@ -31,10 +31,11 @@ function Slider({ p }: { p: Par }) {
   );
 }
 
-export default function Provas({ pares }: { pares: Par[] }) {
+export default function Provas({ pares, semAbas = false }: { pares: Par[]; semAbas?: boolean }) {
   const [filtro, setFiltro] = useState<string | null>(null);
   const filtros: [string, string | null][] = [['Todos', null], ['Revelar', 'Revelar'], ['Ambientar', 'Ambientar'], ['Acabamento', 'Acabamento']];
   const lista = filtro ? pares.filter(p => p.tag === filtro) : pares;
+  if (semAbas) return <Slider p={pares[0]} />;
   return (
     <>
       <div className="chips">
@@ -44,16 +45,19 @@ export default function Provas({ pares }: { pares: Par[] }) {
       </div>
       <div className="split">
         {lista.map(p => (
-          <figure key={p.id} className="card" style={{ margin: 0 }}>
+          <figure key={p.id} className="prova" style={{ margin: 0 }}>
             <Slider p={p} />
             <div className="row" style={{ justifyContent: 'space-between' }}>
               <b style={{ fontWeight: 500 }}>{p.titulo}</b>
               <span className="mono">{p.tag}</span>
             </div>
-            <figcaption className="stack" style={{ gap: 4 }}>
-              <small><b style={{ fontWeight: 500 }}>Mudou:</b> {p.mudou}</small>
-              <small><b style={{ fontWeight: 500 }}>Ficou igual:</b> {p.ficou}</small>
-            </figcaption>
+            <details className="q2">
+              <summary>O que mudou</summary>
+              <figcaption className="stack" style={{ gap: 4 }}>
+                <small><b style={{ fontWeight: 500 }}>Mudou:</b> {p.mudou}</small>
+                <small><b style={{ fontWeight: 500 }}>Ficou igual:</b> {p.ficou}</small>
+              </figcaption>
+            </details>
           </figure>
         ))}
       </div>
