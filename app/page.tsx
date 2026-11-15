@@ -5,14 +5,20 @@ import Provas, { type Par } from './Provas';
 
 export const dynamic = 'force-dynamic';
 
-const TXT = encodeURIComponent('Oi, Filipe. Vim pelo site da Lucida Room e quero um orçamento sob medida. Tenho fotos de ');
+const TXT = encodeURIComponent('Oi, Filipe. Vim pelo site da Lucida Room e quero tratar fotos de ');
 const WPP = `https://wa.me/5548998125929?text=${TXT}`;
-const MAIL = 'mailto:lucidaroom.ia@gmail.com?subject=Or%C3%A7amento%20Lucida%20Room';
+const MAIL = 'mailto:lucidaroom.ia@gmail.com?subject=Pedido%20Lucida%20Room';
 
 const PARES: Par[] = [
   { id: 'salaverde', titulo: 'Sala verde', tag: 'Revelar', antes: '/10-sala-verde-antes.jpg', depois: '/10-sala-verde-depois.jpg',
     mudou: 'verticais corrigidas, luz de LED e spots equilibrada, cor fiel ao verde do projeto.',
     ficou: 'sofá, poltrona, estante, quadro e tapete — exatamente os da sala. Nada entrou, nada saiu.' },
+  { id: 'jantar', titulo: 'Sala de jantar', tag: 'Ambientar', antes: '/11-jantar-antes.jpg', depois: '/11-jantar-depois.jpg',
+    mudou: 'prumo e luz equilibrados; saíram os objetos de uso do dia a dia; estante composta com livros, cerâmicas e plantas; mesa posta.',
+    ficou: 'mesa, cadeiras de palhinha, pendentes, painel de madeira e estante — os do projeto.' },
+  { id: 'quarto', titulo: 'Quarto', tag: 'Ambientar', antes: '/12-quarto-antes.jpg', depois: '/12-quarto-depois.jpg',
+    mudou: 'enquadramento, luz da sanca e das arandelas; saiu a cadeira de apoio com objetos; entraram mesas de cabeceira, quadros e roupa de cama.',
+    ficou: 'cabeceira estofada, arandelas, cortina e piso — os do projeto.' },
   { id: 'ilha', titulo: 'Cozinha com ilha', tag: 'Ambientar', antes: '/08-ilha-antes.jpg', depois: '/08-ilha-depois.jpg',
     mudou: 'prumo e simetria corrigidos, luz de janela recuperada; saíram louça, panela e utensílios; entraram vaso, pão e azeite.',
     ficou: 'marcenaria, pedra, banquetas e eletros — os do projeto.' },
@@ -30,186 +36,265 @@ const PARES: Par[] = [
     ficou: 'brise, pergolado, muro de pedra e escada — os construídos.' }
 ];
 
-const VELHO = [
-  'Esperar a agenda do fotógrafo.',
-  'R$ 800–1.500 por sessão, em média R$ 25–45 por foto.',
-  'Deslocamento, hora marcada, imóvel arrumado antes.',
-  'Ou publicar a foto do celular do jeito que ela saiu.'
+const PASSOS: [string, string][] = [
+  ['Mande as fotos', 'Pelo WhatsApp ou por e-mail, no arquivo original do celular. Várias de uma vez.'],
+  ['Combinamos o que muda', 'Eu olho cada foto e digo o que dá para fazer: enquadramento, luz, o que sai da cena e, no Ambientar, a decoração.'],
+  ['Receba no prazo', 'Revelar em 24 h, Ambientar em 72 h. Cada imagem conferida por mim antes de sair.'],
+  ['Ajuste e use', 'Uma rodada de ajuste inclusa. Entrega em alta resolução, pronta para portfólio, anúncio e redes.']
 ];
 
-const PASSOS: [string, string][] = [
-  ['Suba a foto', 'A do celular mesmo, no arquivo original.'],
-  ['Confira a lista', 'A plataforma lê o espaço e escreve o que vai fazer, item por item. Você marca e desmarca antes de gastar crédito.'],
-  ['Baixe em 4K', 'Cerca de um minuto. Ajustes por texto, e os formatos de feed, stories, quadrado e site.']
+const CHECK: [string, string][] = [
+  ['Prumo', 'Verticais retas, sem parede caindo.'],
+  ['Perspectiva', 'Ponto de vista de fotografia de arquitetura, sem distorção de grande-angular.'],
+  ['Escala', 'Móvel e objeto no tamanho real do espaço.'],
+  ['Materiais', 'Piso, pedra e marcenaria continuam os do imóvel.'],
+  ['Luz plausível', 'Luz que poderia existir naquele lugar e naquela hora.'],
+  ['Elementos construtivos', 'Nenhuma janela, porta ou parede inventada.']
 ];
 
 const FAQ: [string, string][] = [
+  ['É feito com IA?', 'Sim, e não escondemos. A IA está na execução; o critério é de arquiteto. Cada imagem é comparada com a sua foto original e só sai se passar no checklist de seis pontos.'],
   ['Vocês inventam coisas na foto?', 'No Revelar, nunca: nada entra que não exista no imóvel. No Ambientar, entram mobiliário, decoração e, se pedido, acabamentos — e isso é sempre informado como simulação.'],
-  ['A foto fica com cara de IA?', 'É o erro que mais combatemos. Antes de entregar, o resultado é comparado com a sua foto e reprovado se a cor desviou, se perdeu nitidez, se apareceu objeto que ninguém pediu, se um móvel virou outro modelo ou se uma parede mudou de material. Reprovou, refaz.'],
-  ['Quanto tempo leva?', 'Na plataforma, cerca de um minuto por foto. No sob medida, Revelar em 24 h e Ambientar em 72 h.'],
-  ['E se eu não gostar?', 'Na plataforma, o Revelar inclui um ajuste e o Ambientar inclui dois, pedidos por texto. No sob medida, uma rodada de ajuste está incluída sobre o que foi combinado.'],
-  ['Posso usar nos anúncios e nas redes?', 'Pode. As imagens são suas. Em anúncio de venda ou locação, indique que a decoração ou o acabamento é ilustrativo quando usar Ambientar ou troca de acabamento.']
+  ['Quanto tempo leva?', 'Revelar em até 24 h e Ambientar em até 72 h, contados da confirmação do pedido. Precisa antes? Pergunte pela urgência.'],
+  ['E se eu não gostar?', 'Uma rodada de ajuste está incluída sobre o que foi combinado. Se a foto não permitir o resultado pedido, eu aviso antes de começar.'],
+  ['Como pago?', 'Por Pix ou link de pagamento do Mercado Pago (cartão), depois de combinarmos o pedido pelo WhatsApp.'],
+  ['Posso usar nos anúncios e nas redes?', 'Pode. As imagens são suas. Em anúncio de venda ou locação, indique que a decoração ou o acabamento é ilustrativo quando usar Ambientar.'],
+  ['E as pessoas que aparecem na foto?', 'Saem da cena, junto com rostos, placas de carro e objetos pessoais.'],
+  ['E a plataforma automática?', 'Está em construção. Quando abrir, você vai poder fazer tudo sozinho, direto no site. Por enquanto, todo pedido é feito comigo.']
 ];
 
 export default async function Home() {
   const user = await currentUser();
   if (user) redirect('/painel');
-  const destaque = PARES[0];
+  const destaque = PARES[1];
 
   return (
     <>
-      <section className="hero2">
-        <div className="hero2-txt">
-          <h1>Foto de celular.<br />Olhar de arquitetura.</h1>
-          <p className="lead">A foto que você já tirou, com cara de fotografia. Você manda pelo WhatsApp e eu, arquiteto, trato e confiro cada imagem. <b>Revelar em 24 h</b>, a partir de <b>R$ 26,70</b> por foto.</p>
-          <div className="row">
-            <a className="btn" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
-            <a className="btn sec" href="#caminhos">Ver como funciona</a>
-          </div>
-          <small className="nota">A plataforma de autoatendimento está em construção. Por enquanto, todo pedido é feito sob medida · nada entra na foto que não exista no imóvel.</small>
-        </div>
-        <div className="hero2-img">
-          <Provas pares={[destaque]} semAbas />
-          <small className="nota">Arraste a linha. {destaque.titulo} · {destaque.tag}</small>
-        </div>
-      </section>
-
-      <section className="stack" id="provas">
-        <div className="mono">Provas</div>
-        <h2>Antes e depois, com a imagem inteira.</h2>
-        <Provas pares={PARES} />
-        <small>Nada inventado no Revelar · simulação declarada no Ambientar e na troca de acabamentos.</small>
-      </section>
-
-      <section className="stack">
-        <div className="mono">Do jeito antigo</div>
-        <h2>Uma foto boa custava uma sessão inteira.</h2>
-        <ul className="riscado">{VELHO.map(t => <li key={t}>{t}</li>)}</ul>
-        <p className="lead virada">Agora é a foto que você já tem, em cerca de 1 minuto, a partir de R$ 4,74.</p>
-      </section>
-
-      <section className="stack">
-        <div className="mono">Como funciona</div>
-        <h2>Três passos.</h2>
-        <div className="grid">
-          {PASSOS.map(([t, d], i) => (
-            <div key={t} className="card"><div className="mono">0{i + 1}</div><h3>{t}</h3><small>{d}</small></div>
-          ))}
-        </div>
-      </section>
-
-      <section className="stack" id="caminhos">
-        <div className="mono">Dois caminhos</div>
-        <h2>Você faz na plataforma, ou nós fazemos por você.</h2>
-        <p className="lead">O mesmo motor de imagem e o mesmo checklist nos dois. A diferença é quem conduz.</p>
-        <div className="split">
-          <div className="via">
-            <div className="mono">Plataforma · em construção</div>
-            <h3>Você faz</h3>
-            <p className="lead">Sobe a foto, confere a lista do que vai ser feito e baixa o resultado. Ajustes por texto, ali mesmo.</p>
-            <ul className="marcas">
-              <li>Cerca de 1 minuto por foto</li>
-              <li>A partir de R$ 4,74 por foto no plano maior</li>
-              <li>3 fotos grátis para testar, sem cartão</li>
-            </ul>
-            <small>Ainda em construção. Enquanto isso, faça o pedido sob medida.</small>
-          </div>
-          <div className="via">
-            <div className="mono">Sob medida · por foto</div>
-            <h3>Nós fazemos</h3>
-            <p className="lead">Você manda as fotos, eu conduzo a geração, confiro cada resultado e só envio o que passaria no meu próprio portfólio.</p>
-            <ul className="marcas">
-              <li>Revelar em 24 h, a partir de R$ 26,70 por foto</li>
-              <li>Ambientar em 72 h, a partir de R$ 48,90 por imagem</li>
-              <li>Uma rodada de ajuste inclusa</li>
-            </ul>
+      <section className="lr-band lr-dark lr-hero">
+        <div className="lr-in lr-cols">
+          <div className="lr-col">
+            <h1 className="lr-h1">Foto de celular.<br />Olhar de arquitetura.</h1>
+            <p className="lr-lead">Você manda a foto que já tirou. Eu, arquiteto, trato e confiro cada imagem até ela parecer fotografia — sem inventar o que não existe no imóvel.</p>
             <div className="row">
-              <a className="btn" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
-              <a className="btn sec" href={MAIL}>Por e-mail</a>
+              <a className="lr-btn claro" href={WPP} target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
+              <a className="lr-btn contorno" href="#precos">Ver preços</a>
+            </div>
+            <div className="lr-mono claro">Revelar em 24 h · Ambientar em 72 h · ajuste incluído</div>
+          </div>
+          <div className="lr-col">
+            <Provas pares={[destaque]} semAbas />
+            <div className="row"><span className="lr-tag amb">{destaque.tag}</span><small className="lr-sub">{destaque.titulo} · arraste a linha</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="lr-band">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">01 · O problema</div>
+          <h2 className="lr-h2">A foto do celular já existe. Falta ela parecer fotografia.</h2>
+          <div className="lr-tres">
+            <div className="lr-num tracejado">
+              <span className="lr-selo">Fotógrafo · referência de mercado</span>
+              <b className="riscar">R$ 800–2.000</b>
+              <p>Não é preço da Lucida Room. É quanto custa uma sessão de fotógrafo: por imóvel, com agenda e deslocamento.</p>
+            </div>
+            <div className="lr-num">
+              <b>R$ 26,70</b>
+              <p>Lucida Room · Revelar, por foto no pacote de 10. A partir da foto que você já tem, entregue em 24 h.</p>
+            </div>
+            <div className="lr-num">
+              <b>Inventa</b>
+              <p>App de IA sozinho. Troca o piso, cria janelas, muda a escala do móvel. Fica bonito, mas não é o seu espaço.</p>
             </div>
           </div>
         </div>
-        <p><Link href="/precos">Ver todos os planos e preços →</Link></p>
       </section>
 
-      <section className="stack">
-        <div className="mono">Real e simulação</div>
-        <h2>O que é real fica real. O que é simulação, a gente avisa.</h2>
-        <div className="grid">
-          <div className="card"><h3>Revelar</h3><small>A mesma foto, com cara de fotografia: perspectiva, prumo, luz, cor e nitidez. Cena limpa. Nada entra que não exista no imóvel.</small></div>
-          <div className="card"><h3>Ambientar</h3><small>O mesmo espaço, com outra decoração em escala real. A arquitetura e os materiais continuam como são. Informado como simulação.</small></div>
-          <div className="card"><h3>Trocar acabamentos</h3><small>Outra cor de parede, outro piso, outra marcenaria — restrito à superfície marcada. Informado como simulação.</small></div>
-        </div>
-      </section>
-
-      <section className="stack" id="paraquem">
-        <div className="mono">Para quem é</div>
-        <h2>Três usos, o mesmo motor.</h2>
-        <div className="grid">
-          <div className="card">
-            <h3>Arquitetos e designers</h3>
-            <b style={{ fontWeight: 500 }}>Toda obra entregue vira portfólio.</b>
-            <ul className="marcas">
-              <li>Revelar 10 fotos por R$ 267 no sob medida — menos que uma sessão de fotógrafo</li>
-              <li>Registro no dia da entrega, antes de o cliente mudar o layout</li>
-              <li>Ambientar quando a decoração do morador não representa o projeto</li>
-            </ul>
-          </div>
-          <div className="card">
-            <h3>Corretores e imobiliárias</h3>
-            <b style={{ fontWeight: 500 }}>A foto é o primeiro clique do anúncio.</b>
-            <ul className="marcas">
-              <li>Imóvel ocupado: o Revelar tira os objetos do morador sem tocar no imóvel</li>
-              <li>Imóvel vazio: o Ambientar mostra o tamanho real com mobiliário em escala</li>
-              <li>Toda ambientação é informada como simulação</li>
-            </ul>
-          </div>
-          <div className="card">
-            <h3>Restaurantes, cafés e lojas</h3>
-            <b style={{ fontWeight: 500 }}>O espaço é bonito. A foto das redes, não.</b>
-            <ul className="marcas">
-              <li>Revelar 5 fotos por R$ 149 no sob medida: salão, balcão, fachada, vitrine</li>
-              <li>Clientes e equipe saem da cena; o espaço fica como é</li>
-              <li>Letreiro e cardápio ficam exatamente como estão</li>
-            </ul>
+      <section className="lr-band sem-topo" id="provas">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">02 · Provas</div>
+          <h2 className="lr-h2">O que mudou está escrito.</h2>
+          <p className="lr-lead escuro">Sempre antes → depois, com a imagem inteira. Arraste a linha; a legenda diz o que mudou e o que ficou igual.</p>
+          <Provas pares={PARES} />
+          <div className="lr-centro">
+            <a className="lr-btn" href={WPP} target="_blank" rel="noopener">Quero isso nas minhas fotos</a>
+            <div className="lr-mono">Nada inventado no Revelar · simulação declarada no Ambientar</div>
           </div>
         </div>
       </section>
 
-      <section className="stack" id="quem">
-        <div className="mono">Quem confere</div>
-        <h2>A ferramenta qualquer um tem. O critério é de arquitetura.</h2>
-        <div className="perfil">
-          <div className="retrato" />
-          <div className="stack">
-            <b style={{ fontWeight: 500 }}>Filipe Storch · arquiteto e urbanista, CAU ativo</b>
-            <p className="lead">Nove anos de projeto, mais de 200 projetos entregues em residencial e comercial. Cada imagem passa por um checklist de seis pontos — prumo, perspectiva, escala, materiais, luz plausível e elementos construtivos. Reprovou em qualquer um, refaz.</p>
-            <p><Link href="/criterio">Ver o checklist completo →</Link></p>
+      <section className="lr-band lr-dark" id="como">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono lilas">03 · Como funciona</div>
+          <h2 className="lr-h2">Quatro passos. Nenhum agendamento.</h2>
+          <div className="lr-quatro">
+            {PASSOS.map(([t, d], i) => (
+              <div key={t} className="lr-passo"><div className="lr-mono lilas">0{i + 1}</div><h3>{t}</h3><p>{d}</p></div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="stack">
-        <div className="mono">Perguntas frequentes</div>
-        <h2>Respostas curtas.</h2>
-        {FAQ.map(([q, a]) => (
-          <details key={q} className="q2"><summary>{q}</summary><p className="lead">{a}</p></details>
-        ))}
-        <p><Link href="/guia">Antes de fotografar: 6 cuidados que mudam o resultado →</Link></p>
+      <section className="lr-band">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">04 · Dois serviços</div>
+          <h2 className="lr-h2">O que é real fica real. O que é simulação, a gente avisa.</h2>
+          <div className="lr-dois">
+            <div className="lr-serv">
+              <span className="lr-tag">Revelar</span>
+              <h3>A mesma foto, com cara de fotografia.</h3>
+              <ul>
+                <li><b>O espaço fica exatamente como está.</b> Corrijo perspectiva, prumo, luz, cor, ruído e nitidez.</li>
+                <li><b>Cena limpa.</b> Saem pessoas, rostos, placas de carro, cabos e objetos soltos.</li>
+              </ul>
+              <div className="lr-mono">Nada entra na foto que não exista no espaço.</div>
+            </div>
+            <div className="lr-serv roxo">
+              <span className="lr-tag amb">Ambientar</span>
+              <h3>O mesmo espaço, com outra decoração.</h3>
+              <ul>
+                <li><b>Decoração.</b> Inclui o Revelar + mobiliário, decoração e objetos de cena em escala real.</li>
+                <li><b>Acabamentos.</b> Se quiser, também cor de parede, piso, revestimento e marcenaria.</li>
+              </ul>
+              <div className="lr-mono lilas">Sempre informado como simulação.</div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section className="fecho">
-        <h2>Comece pela foto que você já tem</h2>
-        <div className="row">
-          <a className="btn" href={WPP} target="_blank" rel="noopener">Pedir orçamento no WhatsApp</a>
-          <a className="btn sec" href={MAIL}>Por e-mail</a>
+      <section className="lr-band lr-grafite" id="quem">
+        <div className="lr-in lr-cols">
+          <div className="lr-col">
+            <div className="lr-mono lilas">05 · Quem confere</div>
+            <h2 className="lr-h2">Qualquer um tem a ferramenta. <span className="lilas">O critério é de arquitetura.</span></h2>
+            <div className="lr-perfil">
+              <div className="retrato" />
+              <div className="lr-col sm">
+                <b>Filipe Storch</b>
+                <p>Arquiteto e urbanista, CAU ativo. Nove anos de projeto, mais de 200 projetos entregues em residencial e comercial. Cada imagem sai das minhas mãos, não de uma fila automática.</p>
+              </div>
+            </div>
+          </div>
+          <div className="lr-col">
+            <div className="lr-mono lilas">Checklist de cada imagem</div>
+            <div>
+              {CHECK.map(([t, d], i) => (
+                <div key={t} className="lr-check"><span className="lr-mono lilas">0{i + 1}</span><div><b>{t}</b><p>{d}</p></div></div>
+              ))}
+            </div>
+            <Link href="/criterio" className="lr-link">Ver o critério completo →</Link>
+          </div>
         </div>
-        <div className="row mono">
-          <a href="https://instagram.com/lucidaroom.ia" target="_blank" rel="noopener">@lucidaroom.ia</a>
-          <a href={MAIL}>lucidaroom.ia@gmail.com</a>
-          <span>(48) 99812-5929</span>
+      </section>
+
+      <section className="lr-band" id="paraquem">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">06 · Para quem</div>
+          <h2 className="lr-h2">Para quem é.</h2>
+          <div className="lr-tres">
+            <div className="lr-publico">
+              <div className="lr-mono">Arquitetos e designers</div>
+              <h3>Toda obra entregue vira portfólio.</h3>
+              <ul>
+                <li>10 fotos Revelar por R$ 267 — menos que uma sessão de fotógrafo.</li>
+                <li>Registro no dia da entrega, antes de o cliente mudar o layout.</li>
+                <li>Ambientar quando a decoração do morador não representa o projeto.</li>
+              </ul>
+            </div>
+            <div className="lr-publico">
+              <div className="lr-mono">Corretores e imobiliárias</div>
+              <h3>A foto é o primeiro clique do anúncio.</h3>
+              <ul>
+                <li>Imóvel ocupado: o Revelar tira os objetos do morador sem tocar no imóvel.</li>
+                <li>Imóvel vazio: o Ambientar mostra o tamanho real com mobiliário em escala.</li>
+                <li>Toda ambientação é informada como simulação.</li>
+              </ul>
+            </div>
+            <div className="lr-publico">
+              <div className="lr-mono">Restaurantes, cafés e lojas</div>
+              <h3>O espaço é bonito. A foto das redes, não.</h3>
+              <ul>
+                <li>5 fotos Revelar por R$ 149: salão, balcão, fachada, vitrine.</li>
+                <li>Clientes e equipe saem da cena; o espaço fica como é.</li>
+                <li>Letreiro e cardápio ficam exatamente como estão.</li>
+              </ul>
+            </div>
+          </div>
         </div>
-        <small>A Lucida Room não esconde a IA: ela está em todo o processo. O que garantimos é o critério de quem aprova. Toda ambientação é informada ao cliente como simulação.</small>
+      </section>
+
+      <section className="lr-band linha" id="precos">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">07 · Preços de lançamento</div>
+          <h2 className="lr-h2">Por foto, sem assinatura.</h2>
+          <p className="lr-lead escuro">Mesmo preço para todos. Quanto mais fotos no pedido, menor o valor por foto.</p>
+          <div className="lr-dois">
+            <div className="lr-preco">
+              <div className="row" style={{ justifyContent: 'space-between' }}><span className="lr-tag">Revelar</span><span className="lr-mono">Entrega em 24 h</span></div>
+              <div className="lr-linhas">
+                <span>1 foto</span><b>R$ 34,90</b>
+                <span>5 fotos <small>R$ 29,80 cada</small></span><b>R$ 149</b>
+                <span>10 fotos <small>R$ 26,70 cada</small></span><b>R$ 267</b>
+              </div>
+              <a className="lr-btn" href={WPP} target="_blank" rel="noopener">Pedir Revelar</a>
+            </div>
+            <div className="lr-preco">
+              <div className="row" style={{ justifyContent: 'space-between' }}><span className="lr-tag amb">Ambientar</span><span className="lr-mono">Entrega em 72 h</span></div>
+              <div className="lr-linhas">
+                <span>1 imagem</span><b>R$ 54,90</b>
+                <span>5 imagens <small>R$ 45,80 cada</small></span><b>R$ 229</b>
+                <span>10 imagens <small>R$ 39,90 cada</small></span><b>R$ 399</b>
+              </div>
+              <a className="lr-btn" href={WPP} target="_blank" rel="noopener">Pedir Ambientar</a>
+            </div>
+          </div>
+          <ul className="lr-regras">
+            <li>Troca de acabamento (parede, piso, revestimento, marcenaria): + R$ 30 por imagem.</li>
+            <li>Uma rodada de ajuste inclusa sobre o que foi combinado.</li>
+            <li>Pix ou cartão pelo Mercado Pago, depois de combinarmos o pedido.</li>
+            <li>Valores de lançamento.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="lr-band lr-breve">
+        <div className="lr-in lr-cols">
+          <div className="lr-col sm">
+            <div className="lr-mono">Em breve</div>
+            <h2 className="lr-h2 menor">Uma plataforma para você fazer sozinho.</h2>
+          </div>
+          <p className="lr-lead escuro">O mesmo critério, direto no site: você sobe a foto, marca o que muda e recebe o resultado. Está em construção. Enquanto isso, cada pedido é feito comigo, foto por foto.</p>
+        </div>
+      </section>
+
+      <section className="lr-band">
+        <div className="lr-in lr-col lg">
+          <div className="lr-mono">08 · Perguntas</div>
+          <h2 className="lr-h2">Respostas curtas.</h2>
+          <div>
+            {FAQ.map(([q, a]) => (
+              <details key={q} className="lr-faq"><summary>{q}</summary><p>{a}</p></details>
+            ))}
+          </div>
+          <Link href="/guia" className="lr-link">Antes de fotografar: 6 cuidados que mudam o resultado →</Link>
+        </div>
+      </section>
+
+      <section className="lr-band lr-dark">
+        <div className="lr-in lr-col lg lr-fim">
+          <h2 className="lr-h2">Entre em contato para transformar as fotos que você já tem.</h2>
+          <div className="row">
+            <a className="lr-btn claro" href={WPP} target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
+            <a className="lr-btn contorno" href={MAIL}>Por e-mail</a>
+          </div>
+          <div className="row lr-mono claro">
+            <a href="https://instagram.com/lucidaroom.ia" target="_blank" rel="noopener">@lucidaroom.ia</a>
+            <a href={MAIL}>lucidaroom.ia@gmail.com</a>
+            <span>(48) 99812-5929</span>
+            <Link href="/entrar">Entrar</Link>
+          </div>
+          <small className="lr-sub">A Lucida Room não esconde a IA: ela está em todo o processo. O que garantimos é o critério de quem aprova. Toda ambientação é informada ao cliente como simulação.</small>
+        </div>
       </section>
     </>
   );
