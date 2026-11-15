@@ -1,5 +1,5 @@
 :root{--roxo:#281630;--lilas:#B4A0D8;--papel:#F4F1EC;--tinta:#23211F;--cinza:#5c5852;--linha:#d9d4cb;--branco:#FBF9F5}
-*{box-sizing:border-box}html,body{margin:0}
+*{box-sizing:border-box}html,body{margin:0}html{scroll-behavior:smooth}
 body{background:var(--papel);color:var(--tinta);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
 a{color:var(--roxo)}
 h1,h2,h3{font-family:'Space Grotesk',sans-serif;font-weight:500;line-height:1.1;margin:0}
@@ -29,6 +29,7 @@ h1{font-size:clamp(26px,4vw,40px)}h2{font-size:22px}
 .cmp img{display:block;width:100%;height:auto}
 .cmp .over{position:absolute;inset:0}.cmp .over img{width:100%;height:100%;object-fit:cover}
 .cmp .bar{position:absolute;top:0;bottom:0;width:2px;background:var(--papel)}
+.cmp .bar i{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:var(--papel);border:2px solid var(--tinta)}
 .lbl{position:absolute;top:10px;background:var(--tinta);color:var(--papel);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;padding:4px 8px}
 input[type=text],input[type=email],input[type=password],select{width:100%;font:inherit;padding:12px;border:1px solid var(--cinza);border-radius:6px;background:#fff}
 label.f{display:flex;flex-direction:column;gap:6px;font-size:14px}
@@ -46,8 +47,8 @@ label.f{display:flex;flex-direction:column;gap:6px;font-size:14px}
 .marcas{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px;border-top:1px solid var(--linha);padding-top:12px}
 .marcas li::before{content:'—';color:var(--lilas);margin-right:8px}
 .card.dest{border:2px solid var(--roxo)}
-.par{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:6px;overflow:hidden}
-.par img{display:block;width:100%;height:100%;object-fit:cover}
+.fecho a{text-decoration:none}
+.fecho .row a,.fecho .row span{font-size:14px}
 .tabela{display:flex;flex-direction:column;font-size:14px;overflow-x:auto}
 .tabela>div{display:grid;grid-template-columns:1.2fr 1fr 1fr 1.3fr;gap:8px;padding:8px 0;border-top:1px solid var(--linha);min-width:380px}
 .tabela>div:first-child{border-top:0;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cinza)}
