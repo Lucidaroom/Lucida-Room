@@ -31,7 +31,7 @@ export default function Guia() {
       <section className="fecho">
         <h2>Fotografou? Suba a primeira.</h2>
         <div className="row">
-          <Link className="btn" href="/entrar">Testar com 3 fotos grátis</Link>
+          <a className="btn" href="https://wa.me/5548998125929?text=Oi%2C%20Filipe.%20Vim%20pelo%20site%20da%20Lucida%20Room%20e%20quero%20tratar%20fotos." target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
           <Link className="btn sec" href="/precos">Ver preços</Link>
         </div>
       </section>
