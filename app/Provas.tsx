@@ -23,17 +23,17 @@ function Slider({ p }: { p: Par }) {
       <img src={p.depois} alt={`${p.titulo} — depois`} draggable={false} loading="lazy" />
       <div className="over" style={{ clipPath: `inset(0 ${100 - x}% 0 0)` }}>
         <img src={p.antes} alt={`${p.titulo} — antes`} draggable={false} loading="lazy" />
-        <span className="lbl" style={{ left: 10 }}>Antes · celular</span>
+        <span className="lbl" style={{ left: 10 }}>ANTES</span>
       </div>
-      <span className="lbl" style={{ right: 10 }}>Depois</span>
-      <div className="bar" style={{ left: `${x}%` }}><i /></div>
+      <span className="lbl" style={{ right: 10 }}>DEPOIS</span>
+      <div className="bar" style={{ left: `${x}%` }}><i><svg width="18" height="11" viewBox="0 0 20 12" fill="none" stroke="#281630" strokeWidth="2"><path d="M6 1 L1 6 L6 11 M14 1 L19 6 L14 11" /></svg></i></div>
     </div>
   );
 }
 
 export default function Provas({ pares, semAbas = false }: { pares: Par[]; semAbas?: boolean }) {
   const [filtro, setFiltro] = useState<string | null>(null);
-  const filtros: [string, string | null][] = [['Todos', null], ['Revelar', 'Revelar'], ['Ambientar', 'Ambientar'], ['Acabamento', 'Acabamento']];
+  const filtros: [string, string | null][] = [['Todos', null], ['Revelar', 'Revelar'], ['Ambientar', 'Ambientar'], ['Ambientar + acabamento', 'Acabamento']];
   const lista = filtro ? pares.filter(p => p.tag === filtro) : pares;
   if (semAbas) return <Slider p={pares[0]} />;
   return (
@@ -43,21 +43,18 @@ export default function Provas({ pares, semAbas = false }: { pares: Par[]; semAb
           <button key={rot} type="button" className="chip" aria-pressed={filtro === v} onClick={() => setFiltro(v)}>{rot}</button>
         ))}
       </div>
-      <div className="split">
+      <div className="lr-grade">
         {lista.map(p => (
           <figure key={p.id} className="prova" style={{ margin: 0 }}>
             <Slider p={p} />
-            <div className="row" style={{ justifyContent: 'space-between' }}>
-              <b style={{ fontWeight: 500 }}>{p.titulo}</b>
-              <span className="mono">{p.tag}</span>
+            <div className="row">
+              <b className="lr-tit">{p.titulo}</b>
+              <span className={p.tag === 'Revelar' ? 'lr-tag' : 'lr-tag amb'}>{p.tag === 'Acabamento' ? 'Ambientar + acabamento' : p.tag}</span>
             </div>
-            <details className="q2">
-              <summary>O que mudou</summary>
-              <figcaption className="stack" style={{ gap: 4 }}>
-                <small><b style={{ fontWeight: 500 }}>Mudou:</b> {p.mudou}</small>
-                <small><b style={{ fontWeight: 500 }}>Ficou igual:</b> {p.ficou}</small>
-              </figcaption>
-            </details>
+            <figcaption className="lr-leg">
+              <div><b>Mudou:</b> {p.mudou}</div>
+              <div><b>Ficou igual:</b> {p.ficou}</div>
+            </figcaption>
           </figure>
         ))}
       </div>
