@@ -42,8 +42,8 @@ export default function Precos() {
       </section>
 
       <section className="stack">
-        <div className="mono">Caminho 1 · plataforma</div>
-        <h2>Por crédito, você mesmo faz.</h2>
+        <div className="mono">Caminho 1 · plataforma · em construção</div>
+        <h2>Por crédito, você mesmo faz. Em breve.</h2>
         <div className="grid">
           {PLANOS.map(([nome, cred, preco, txt, dest]) => (
             <div key={nome} className={dest ? 'card dest' : 'card'}>
@@ -58,7 +58,7 @@ export default function Precos() {
         <h3>Quanto fica por foto</h3>
         <Tabela linhas={PORFOTO} />
         <small>Pix e cartão pelo Mercado Pago. Teste com 3 prévias grátis, sem cartão: as prévias saem com marca d’água e o download é liberado depois da compra.</small>
-        <Link className="btn" href="/entrar">Testar com 3 fotos grátis</Link>
+        <small>A plataforma ainda está em construção. Enquanto isso, os pedidos são feitos sob medida, abaixo.</small>
       </section>
 
       <section className="stack">
