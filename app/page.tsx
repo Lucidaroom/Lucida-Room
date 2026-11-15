@@ -10,22 +10,22 @@ const WPP = `https://wa.me/5548998125929?text=${TXT}`;
 const MAIL = 'mailto:lucidaroom.ia@gmail.com?subject=Or%C3%A7amento%20Lucida%20Room';
 
 const PARES: Par[] = [
-  { id: 'salaverde', titulo: 'Sala verde', tag: 'Revelar', antes: '/fotos/10-sala-verde-antes.jpg', depois: '/fotos/10-sala-verde-depois.jpg',
+  { id: 'salaverde', titulo: 'Sala verde', tag: 'Revelar', antes: '/10-sala-verde-antes.jpg', depois: '/10-sala-verde-depois.jpg',
     mudou: 'verticais corrigidas, luz de LED e spots equilibrada, cor fiel ao verde do projeto.',
     ficou: 'sofá, poltrona, estante, quadro e tapete — exatamente os da sala. Nada entrou, nada saiu.' },
-  { id: 'ilha', titulo: 'Cozinha com ilha', tag: 'Ambientar', antes: '/fotos/08-ilha-antes.jpg', depois: '/fotos/08-ilha-depois.jpg',
+  { id: 'ilha', titulo: 'Cozinha com ilha', tag: 'Ambientar', antes: '/08-ilha-antes.jpg', depois: '/08-ilha-depois.jpg',
     mudou: 'prumo e simetria corrigidos, luz de janela recuperada; saíram louça, panela e utensílios; entraram vaso, pão e azeite.',
     ficou: 'marcenaria, pedra, banquetas e eletros — os do projeto.' },
-  { id: 'marcenaria', titulo: 'Detalhe de marcenaria', tag: 'Ambientar', antes: '/fotos/05-marcenaria-antes.jpg', depois: '/fotos/05-marcenaria-depois.jpg',
+  { id: 'marcenaria', titulo: 'Detalhe de marcenaria', tag: 'Ambientar', antes: '/05-marcenaria-antes.jpg', depois: '/05-marcenaria-depois.jpg',
     mudou: 'luz de janela recuperada, cor e nitidez; livros e vasos neutros no lugar dos objetos do morador.',
     ficou: 'painel, muxarabi, palhinha e piso — os do projeto.' },
-  { id: 'banheiro', titulo: 'Banheiro', tag: 'Ambientar', antes: '/fotos/07-banheiro-antes.jpg', depois: '/fotos/07-banheiro-depois.jpg',
+  { id: 'banheiro', titulo: 'Banheiro', tag: 'Ambientar', antes: '/07-banheiro-antes.jpg', depois: '/07-banheiro-depois.jpg',
     mudou: 'verticais corrigidas, fitas de LED equilibradas, reflexos controlados; toalhas, sabonete e planta como objetos de cena.',
     ficou: 'mármore, palhinha, serralheria e louças — os do projeto.' },
-  { id: 'lavabo', titulo: 'Lavabo', tag: 'Ambientar', antes: '/fotos/06-lavabo-antes.jpg', depois: '/fotos/06-lavabo-depois.jpg',
+  { id: 'lavabo', titulo: 'Lavabo', tag: 'Ambientar', antes: '/06-lavabo-antes.jpg', depois: '/06-lavabo-depois.jpg',
     mudou: 'perspectiva e prumo, luz do espelho equilibrada, ruído removido; toalha, saboneteira e planta como objetos de cena.',
     ficou: 'revestimento, bancada, metais e marcenaria — os do imóvel.' },
-  { id: 'pergolado', titulo: 'Fachada com pergolado', tag: 'Acabamento', antes: '/fotos/09-fachada-antes.jpg', depois: '/fotos/09-fachada-depois.jpg',
+  { id: 'pergolado', titulo: 'Fachada com pergolado', tag: 'Acabamento', antes: '/09-fachada-antes.jpg', depois: '/09-fachada-depois.jpg',
     mudou: 'luz de fim de tarde e vegetação do canteiro — ambientação, informada ao cliente.',
     ficou: 'brise, pergolado, muro de pedra e escada — os construídos.' }
 ];
@@ -139,6 +139,40 @@ export default async function Home() {
           <div className="card"><h3>Revelar</h3><small>A mesma foto, com cara de fotografia: perspectiva, prumo, luz, cor e nitidez. Cena limpa. Nada entra que não exista no imóvel.</small></div>
           <div className="card"><h3>Ambientar</h3><small>O mesmo espaço, com outra decoração em escala real. A arquitetura e os materiais continuam como são. Informado como simulação.</small></div>
           <div className="card"><h3>Trocar acabamentos</h3><small>Outra cor de parede, outro piso, outra marcenaria — restrito à superfície marcada. Informado como simulação.</small></div>
+        </div>
+      </section>
+
+      <section className="stack" id="paraquem">
+        <div className="mono">Para quem é</div>
+        <h2>Três usos, o mesmo motor.</h2>
+        <div className="grid">
+          <div className="card">
+            <h3>Arquitetos e designers</h3>
+            <b style={{ fontWeight: 500 }}>Toda obra entregue vira portfólio.</b>
+            <ul className="marcas">
+              <li>Revelar 10 fotos por R$ 267 no sob medida — menos que uma sessão de fotógrafo</li>
+              <li>Registro no dia da entrega, antes de o cliente mudar o layout</li>
+              <li>Ambientar quando a decoração do morador não representa o projeto</li>
+            </ul>
+          </div>
+          <div className="card">
+            <h3>Corretores e imobiliárias</h3>
+            <b style={{ fontWeight: 500 }}>A foto é o primeiro clique do anúncio.</b>
+            <ul className="marcas">
+              <li>Imóvel ocupado: o Revelar tira os objetos do morador sem tocar no imóvel</li>
+              <li>Imóvel vazio: o Ambientar mostra o tamanho real com mobiliário em escala</li>
+              <li>Toda ambientação é informada como simulação</li>
+            </ul>
+          </div>
+          <div className="card">
+            <h3>Restaurantes, cafés e lojas</h3>
+            <b style={{ fontWeight: 500 }}>O espaço é bonito. A foto das redes, não.</b>
+            <ul className="marcas">
+              <li>Revelar 5 fotos por R$ 149 no sob medida: salão, balcão, fachada, vitrine</li>
+              <li>Clientes e equipe saem da cena; o espaço fica como é</li>
+              <li>Letreiro e cardápio ficam exatamente como estão</li>
+            </ul>
+          </div>
         </div>
       </section>
 
