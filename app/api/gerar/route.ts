@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { currentUser, sbAdmin, isAdmin } from '@/lib/supabase';
 import { editImage, askJSON, nearestAspect } from '@/lib/gemini';
-import { buildPrompt, checkPrompt, passed, type Answers } from '@/lib/motor';
+import { buildPrompt, checkPrompt, passed, falhas, naoFeitos, type Answers } from '@/lib/motor';
+import { listaPedidos } from '@/lib/plano';
 import { marcaDagua } from '@/lib/imagem';
 import { aplicarGeometria, marcadores, geoDe } from '@/lib/geometria';
 import sharp from 'sharp';
@@ -92,18 +93,25 @@ export async function POST(req: Request) {
     }
     answers = { ...answers, refs };
 
+    // a mesma lista numerada vai para o prompt e para a checagem
+    const pedidos = listaPedidos(photo.analysis, answers, ajustes || undefined);
     let best: { buf: Buffer; check: any } | null = null;
     let correcao: string | undefined;
-    let prompt = '';
+    let prompt = '', promptBest = '';
     for (let tentativa = 0; tentativa < 2; tentativa++) {        // 1 candidata + 1 corrigida se reprovar
       prompt = buildPrompt(photo.analysis, answers, ajustes || undefined, correcao);
       const out = await editImage(prompt, imgs, { size: '2K', aspect });
       let check: any = null;
-      try { check = await askJSON(checkPrompt(photo.analysis, answers.svc), [orig, out]); } catch {}
-      best = { buf: out, check };
+      try { check = await askJSON(checkPrompt(photo.analysis, answers.svc, pedidos.map(p => p.texto)), [orig, out]); } catch {}
+      // fica a melhor das duas tentativas, não necessariamente a última
+      if (!best || falhas(check) <= falhas(best.check)) { best = { buf: out, check }; promptBest = prompt; }
       if (passed(check)) break;
-      correcao = check?.ponto_fraco || undefined;
+      const faltou = naoFeitos(check).map(n => pedidos[n - 1] ? `P${n} (${pedidos[n - 1].texto})` : '').filter(Boolean);
+      correcao = [check?.ponto_fraco, faltou.length ? `pedidos que não foram executados: ${faltou.join('; ')}` : ''].filter(Boolean).join('. ') || undefined;
     }
+    prompt = promptBest || prompt;
+    // guarda, junto da checagem, o texto dos pedidos que não saíram — a tela avisa o cliente
+    if (best?.check) best.check.pedidos_pendentes = naoFeitos(best.check).map(n => pedidos[n - 1]?.cliente).filter(Boolean);
     // prumo e recorte por código, sobre a saída da IA (mesmo enquadramento da original)
     const geo = body.geo && typeof body.geo === 'object' ? body.geo : geoDe(answers.enq);
     const an = photo.analysis || {};
