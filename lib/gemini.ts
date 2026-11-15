@@ -51,24 +51,24 @@ const img = (buf: Buffer, mime = 'image/jpeg'): Part => ({ inlineData: { mimeTyp
 // imagem reduzida para a análise: mais rápida e suficiente para ler a cena
 const reduz = (b: Buffer) => sharp(b).resize({ width: 1280, height: 1280, fit: 'inside' }).jpeg({ quality: 85 }).toBuffer();
 
-export async function askJSON(prompt: string, images: Buffer[]) {
+export async function askJSON(prompt: string, images: Buffer[], budget = 95000, perTry = 55000) {
   const small = await Promise.all(images.map(reduz));
   const j = await call(TEXT_MODELS, {
     contents: [{ role: 'user', parts: [...small.map(b => img(b)), { text: prompt }] }],
     generationConfig: { responseMimeType: 'application/json', temperature: 0.2 }
-  }, 95000, 55000);
+  }, budget, perTry);
   const txt = j.candidates?.[0]?.content?.parts?.map((p: any) => p.text || '').join('') || '{}';
   return JSON.parse(txt);
 }
 
-export async function editImage(prompt: string, base: Buffer | Buffer[], opts: { size: '2K' | '4K'; aspect?: string }) {
+export async function editImage(prompt: string, base: Buffer | Buffer[], opts: { size: '2K' | '4K'; aspect?: string; budget?: number; perTry?: number }) {
   const j = await call(MODEL_IMAGE, {
     contents: [{ role: 'user', parts: [...(Array.isArray(base) ? base : [base]).map(b => img(b)), { text: prompt }] }],
     generationConfig: {
       responseModalities: ['IMAGE'],
       imageConfig: { imageSize: opts.size, ...(opts.aspect ? { aspectRatio: opts.aspect } : {}) }
     }
-  }, 150000, 120000);
+  }, opts.budget ?? 150000, opts.perTry ?? 120000);
   const part = j.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData?.data);
   if (!part) throw new Error('A IA não devolveu imagem. ' + (j.candidates?.[0]?.finishReason || ''));
   return Buffer.from(part.inlineData.data, 'base64');
