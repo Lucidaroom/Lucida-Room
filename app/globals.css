@@ -71,7 +71,7 @@ section.stack{padding-top:16px}
 
 /* quem confere */
 .perfil{display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:start}
-.retrato{aspect-ratio:4/5;border-radius:8px;background:var(--roxo) center/cover no-repeat;background-image:url('/fotos/filipe.jpg')}
+.retrato{aspect-ratio:4/5;border-radius:8px;background:var(--roxo) center/cover no-repeat;background-image:url('/filipe.png')}
 @media (max-width:620px){.perfil{grid-template-columns:1fr}.retrato{max-width:200px}}
 
 /* tabelas */
