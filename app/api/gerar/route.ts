@@ -1,3 +1,4 @@
+import { protegerComposicao } from '@/lib/protecao';
 import { NextResponse } from 'next/server';
 import { currentUser, sbAdmin, isAdmin } from '@/lib/supabase';
 import { editImage, askJSON, nearestAspect } from '@/lib/gemini';
@@ -147,6 +148,12 @@ export async function POST(req: Request) {
     const dir = photo.original_path.replace('/original.jpg', '');
 
     // ——— passe isolado de troca de acabamento, sobre a saída do Revelar ———
+    // composição protegida: textura e cor voltam da original onde a cena não deveria mudar
+    const travarCor = !/quente|fria|warm|cool/i.test(`${ajustes} ${answersBase.luz || ''}`);
+    try {
+      const p = await protegerComposicao(best!.buf, orig, { travarCor });
+      best = { ...best!, buf: p.buf }; check.protegido = Math.round(p.protegido * 100);
+    } catch (e: any) { console.error('[protecao]', e.message); }
     let bruta = best!.buf;
     if (acab) {
       const base_path = `${dir}/v${n}-base.jpg`;
@@ -164,7 +171,8 @@ export async function POST(req: Request) {
         const faltou = trocasNaoFeitas(c).map(i => trocas[i - 1] ? resumoTroca(trocas[i - 1]) : '').filter(Boolean);
         corrT = [c?.ponto_fraco, faltou.length ? `trocas que não foram aplicadas: ${faltou.join('; ')}` : ''].filter(Boolean).join('. ') || undefined;
       }
-      bruta = bestT!.buf;
+      try { bruta = (await protegerComposicao(bestT!.buf, bruta, { travarCor: true })).buf; }
+      catch (e: any) { console.error('[protecao-troca]', e.message); bruta = bestT!.buf; }
       prompt = `${prompt}\n\n=== PASSE DE TROCA DE ACABAMENTOS ===\n${promptTBest || promptT}`;
       check.troca = bestT!.check;
       check.base_path = base_path;
@@ -199,6 +207,8 @@ export async function POST(req: Request) {
   } catch (e: any) {
     await refund();
     await db.from('photos').update({ status: first ? 'erro' : 'pronto' }).eq('id', photo.id);
-    return NextResponse.json({ error: 'Não conseguimos gerar esta foto. Os créditos voltaram para o seu saldo. (' + e.message + ')' }, { status: 502 });
+    console.error('[gerar]', e.message);
+    const cota = /prepay|quota|billing|exhausted|429|RESOURCE_EXHAUSTED/i.test(e.message || '');
+    return NextResponse.json({ error: cota ? 'O serviço de geração está temporariamente indisponível. Os créditos voltaram para o seu saldo; tente de novo em alguns minutos.' : 'Não conseguimos gerar esta foto. Os créditos voltaram para o seu saldo.' }, { status: 502 });
   }
 }
