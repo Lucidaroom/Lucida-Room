@@ -39,10 +39,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ) : (
             <nav className="navtop">
               <Link className="saldo" href="/entrar">Entrar</Link>
-              <Link className="saldo forte" href="/entrar">Testar grátis</Link>
+              <a className="saldo forte" href={`https://wa.me/5548998125929?text=${encodeURIComponent('Oi, Filipe. Vim pelo site da Lucida Room e quero um orçamento sob medida.')}`} target="_blank" rel="noopener">Pedir orçamento</a>
             </nav>
           )}
         </header>
+        {!logado && <div style={{ background: '#C97B2D', color: '#23211F', textAlign: 'center', padding: '8px 16px', fontSize: 14 }}>Plataforma de autoatendimento em construção. Por enquanto, o tratamento das fotos é sob medida, feito e conferido por arquiteto.</div>}
         <main className="wrap">{children}</main>
       </body>
     </html>
