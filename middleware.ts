@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   const { data } = await sb.auth.getUser();
   const p = req.nextUrl.pathname;
   const publicas = ['/', '/precos', '/criterio', '/guia'];
-  const open = publicas.includes(p) || p.startsWith('/entrar') || p.startsWith('/auth') || p.startsWith('/_next');
+  const open = publicas.includes(p) || p.startsWith('/entrar') || p.startsWith('/auth') || p.startsWith('/_next') || /\.(jpe?g|png|webp|svg|ico)$/i.test(p);
   if (!data.user && !open) return NextResponse.redirect(new URL('/entrar', req.url));
   return res;
 }
