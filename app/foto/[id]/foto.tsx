@@ -57,7 +57,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const arrumarPadrao: string[] = (an.arrumar || []).filter((r: any) => r.padrao !== false).map((r: any) => r.nome);
   const perguntas: { pergunta: string; opcoes: string[] }[] = (an.perguntas || []).filter((p: any) => p?.pergunta && (p.opcoes || []).length);
   const [a, setA] = useState<any>(photo.answers || {
-    svc: 'revelar', enq: 'verticais', luz: 'suave', intensidade: 'editorial', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
+    svc: '', enq: 'verticais', luz: 'suave', intensidade: 'editorial', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
     arrumar: arrumarPadrao, retirar_txt: '', melhorar_txt: '', respostas: {}, interpretado: [], adicionar: [], posicoes: {}, densidade: 'Equilibrada', nao_mudar: '', formatos: ['4:5', '9:16']
   });
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
@@ -119,6 +119,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
 
   const gerar = async (ajuste?: string, geo?: any, ajuste_acab?: string) => {
     const acabServ = (photo.service || a.svc) === 'acabamentos';
+    if (!versions.length && !a.svc) { setErro('Escolha o serviço: Revelar, Ambientar ou Trocar acabamentos.'); return; }
     setErro(''); setAviso(''); setBusy(ajuste || ajuste_acab ? 'Gerando o ajuste… cerca de 1 minuto.' : acabServ ? 'Revelando a foto e trocando o acabamento da superfície marcada… cerca de 2 minutos.' : 'Lendo o espaço, corrigindo prumo e luz, conferindo o resultado… cerca de 1 minuto.');
     const r = await fetch('/api/gerar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ photo_id: photo.id, answers: a, ajuste, geo, ajuste_acab }) });
     const j = await r.json(); setBusy('');
@@ -146,6 +147,10 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
           <div><img src={original} alt="Foto enviada" style={{ width: '100%', borderRadius: 8, display: 'block' }} /></div>
           <div className="stack">
             {an.qualidade?.problema && <div className="alert">Essa foto está {an.qualidade.problema}. O resultado pode ter falhas. Para um resultado melhor, refaça {an.qualidade.dica ? `com ${an.qualidade.dica}` : 'a foto'}. Você pode seguir mesmo assim.</div>}
+            <div className="card"><b>1. Escolha o serviço</b>
+              <small>Cada serviço tem um contrato diferente: o Revelar não acrescenta nada à cena; móvel ou decoração nova é Ambientar; outra cor ou material é Trocar acabamentos.</small>
+              <Um opts={SVC} v={a.svc} set={trocarSvc} />
+            </div>
             <div className="mono" style={{ textTransform: 'none', letterSpacing: 0 }}>Isto é o que lemos na sua foto. Se faltou alguma coisa, você escreve no próximo passo.</div>
             <div className="card"><b>O que vimos no espaço</b>
               {an.inventario?.length ? <small>{an.inventario.map((i: any) => `${i.qtd} ${i.item}`).join(' · ')}</small> : <small>Não identificamos o mobiliário em detalhe.</small>}
@@ -174,7 +179,8 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
               </div>)}
               {faltam > 0 && <small>{faltam === 1 ? 'Falta 1 resposta.' : `Faltam ${faltam} respostas.`} Você pode seguir sem responder.</small>}
             </div>}
-            <button className="btn" onClick={() => setEtapa('form')}>Confirmar leitura e continuar</button>
+            {!a.svc && <small>Escolha o serviço acima para continuar.</small>}
+            <button className="btn" disabled={!a.svc} onClick={() => setEtapa('form')}>Confirmar leitura e continuar</button>
           </div>
         </div>
       </div>
@@ -300,7 +306,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             {faltaSup && <small>Marque pelo menos uma superfície e escolha a opção de cor ou material para continuar.</small>}
             {busy ? <div className="ok">{busy}</div> : <div className="row">
               {temLeitura && <button className="btn sec" onClick={() => setEtapa('leitura')}>Voltar à leitura</button>}
-              <button className="btn" disabled={faltaSup || supBusy} onClick={revisar}>Revisar e gerar</button>
+              <button className="btn" disabled={!a.svc || faltaSup || supBusy} onClick={revisar}>Revisar e gerar</button>
             </div>}
           </div>
         </div>
@@ -356,7 +362,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
           </div>
           <div className="card"><b>Ajustar</b>
             <small>{photo.is_trial && !saldo.admin ? 'Ajustes ficam disponíveis depois de liberar a foto.' : restantes ? `${restantes} ajuste${restantes > 1 ? 's' : ''} grátis restante${restantes > 1 ? 's' : ''}.` : 'Ajustes incluídos usados. Cada ajuste a mais gasta 1 crédito.'}</small>
-            <Varios opts={AJ} v={aj} set={setAj} />
+            <Varios opts={(photo.service || a.svc) === 'ambientar' ? AJ : AJ.filter(x => x !== 'Mais decoração')} v={aj} set={setAj} />
             <label className="f">O que tirar da foto<textarea rows={2} style={{ font: 'inherit', padding: 12, borderRadius: 6, border: '1px solid #5c5852' }} placeholder="ex.: objetos soltos, itens sobre bancadas e mesas, fios aparentes" value={ajTirar} onChange={e => setAjTirar(e.target.value)} /></label>
             <label className="f">O que arrumar, alinhar ou melhorar<textarea rows={2} style={{ font: 'inherit', padding: 12, borderRadius: 6, border: '1px solid #5c5852' }} placeholder="ex.: alinhar móveis e eletrodomésticos, fechar portas e gavetas, endireitar o que estiver torto" value={ajArrumar} onChange={e => setAjArrumar(e.target.value)} /></label>
             <input type="text" placeholder="Outro detalhe (opcional)" value={ajTxt} onChange={e => setAjTxt(e.target.value)} />
