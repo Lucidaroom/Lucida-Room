@@ -11,7 +11,7 @@ export default function OG() {
           <div style={{ fontSize: 78, lineHeight: 1.04, letterSpacing: -2 }}>Foto de celular.</div>
           <div style={{ fontSize: 78, lineHeight: 1.04, letterSpacing: -2 }}>Olhar de arquitetura.</div>
         </div>
-        <div style={{ display: 'flex', fontSize: 30, color: '#5c5852' }}>Em 1 minuto · a partir de R$ 4,74 · conferida por arquiteto</div>
+        <div style={{ display: 'flex', fontSize: 30, color: '#5c5852' }}>Revelar em 24 h · Ambientar em 72 h · conferida por arquiteto</div>
       </div>
     ),
     { ...size }
