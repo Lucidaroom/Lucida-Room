@@ -237,6 +237,7 @@ export default async function Home() {
                 <span>10 fotos <small>R$ 26,70 cada</small></span><b>R$ 267</b>
               </div>
               <a className="lr-btn" href={WPP} target="_blank" rel="noopener">Pedir Revelar</a>
+              <div className="lr-pagar"><span>Já combinou? Pagar:</span><a href="https://mpago.la/11J9GvU" target="_blank" rel="noopener">1 foto</a><a href="https://mpago.la/2wu6F8w" target="_blank" rel="noopener">5 fotos</a><a href="https://mpago.la/1hMZXow" target="_blank" rel="noopener">10 fotos</a></div>
             </div>
             <div className="lr-preco">
               <div className="row" style={{ justifyContent: 'space-between' }}><span className="lr-tag amb">Ambientar</span><span className="lr-mono">Entrega em 72 h</span></div>
@@ -246,12 +247,13 @@ export default async function Home() {
                 <span>10 imagens <small>R$ 39,90 cada</small></span><b>R$ 399</b>
               </div>
               <a className="lr-btn" href={WPP} target="_blank" rel="noopener">Pedir Ambientar</a>
+              <div className="lr-pagar"><span>Já combinou? Pagar:</span><a href="https://mpago.la/1neCWqS" target="_blank" rel="noopener">1 imagem</a><a href="https://mpago.la/2ehcZgH" target="_blank" rel="noopener">5 imagens</a><a href="https://mpago.la/1qToUHX" target="_blank" rel="noopener">10 imagens</a></div>
             </div>
           </div>
           <ul className="lr-regras">
             <li>Troca de acabamento (parede, piso, revestimento, marcenaria): + R$ 30 por imagem.</li>
             <li>Uma rodada de ajuste inclusa sobre o que foi combinado.</li>
-            <li>Pix ou cartão pelo Mercado Pago, depois de combinarmos o pedido.</li>
+            <li>Pix ou cartão pelo Mercado Pago. Combine o pedido no WhatsApp antes de pagar.</li>
             <li>Valores de lançamento.</li>
           </ul>
         </div>
