@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import { listaPedidos, GRUPOS } from '@/lib/plano';
 
 type Opt = [string, string, string?];
 const SVC: Opt[] = [['revelar', 'Revelar', '1 crédito · a mesma foto, com cara de fotografia. Nada entra.'], ['ambientar', 'Ambientar', '2 créditos · o mesmo espaço, com outra decoração']];
@@ -13,6 +14,9 @@ const ADD = ['Sofá', 'Poltrona', 'Mesa', 'Cadeiras', 'Cama', 'Tapete', 'Cortina
 const DENS = ['Mínima', 'Equilibrada', 'Completa'];
 const FMT = ['4:5', '9:16', '1:1', '16:9'];
 const FMT_N: Record<string, string> = { '4:5': 'Feed 4:5', '9:16': 'Stories 9:16', '1:1': 'Quadrado 1:1', '16:9': 'Site 16:9' };
+const LUZ_N: Record<string, string> = Object.fromEntries(LUZ.map(([k, l]) => [k, l]));
+const INT_N: Record<string, string> = Object.fromEntries(INT.map(([k, l]) => [k, l]));
+const ENQ_N: Record<string, string> = Object.fromEntries(ENQ.map(([k, l]) => [k, l]));
 const AJ = ['Mais impacto, com cara de revista', 'Acender todas as luzes existentes', 'Mais claro', 'Luz mais quente', 'Luz mais fria', 'Tirar mais objetos', 'Menos decoração', 'Mais decoração'];
 
 function Um({ opts, v, set }: { opts: Opt[]; v: string; set: (x: string) => void }) {
@@ -40,15 +44,18 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const removiveis: string[] = (an.removiveis || []).map((r: any) => r.nome);
   const fixos = removiveis.filter(n => /pessoa|rosto|placa/i.test(n));
   const arrumaveis: string[] = (an.arrumar || []).map((r: any) => r.nome);
+  // sugestões que quase todo fotógrafo faria já vêm marcadas; as que dependem de gosto vêm desmarcadas
+  const arrumarPadrao: string[] = (an.arrumar || []).filter((r: any) => r.padrao !== false).map((r: any) => r.nome);
   const perguntas: { pergunta: string; opcoes: string[] }[] = (an.perguntas || []).filter((p: any) => p?.pergunta && (p.opcoes || []).length);
   const [a, setA] = useState<any>(photo.answers || {
     svc: 'revelar', enq: 'verticais', luz: 'suave', intensidade: 'editorial', remover: removiveis, estilo: 'Natural/orgânico', paleta: 'Neutra quente',
-    arrumar: arrumaveis, retirar_txt: '', melhorar_txt: '', respostas: {}, adicionar: [], posicoes: {}, densidade: 'Equilibrada', nao_mudar: '', formatos: ['4:5', '9:16']
+    arrumar: arrumarPadrao, retirar_txt: '', melhorar_txt: '', respostas: {}, interpretado: [], adicionar: [], posicoes: {}, densidade: 'Equilibrada', nao_mudar: '', formatos: ['4:5', '9:16']
   });
   const up = (k: string) => (v: any) => setA({ ...a, [k]: v });
   // Passo de confirmação da leitura: mostra o que a análise viu antes do questionário.
   const temLeitura = !!(an.inventario?.length || arrumaveis.length || removiveis.length || perguntas.length);
-  const [etapa, setEtapa] = useState<'leitura' | 'form'>(temLeitura ? 'leitura' : 'form');
+  const [etapa, setEtapa] = useState<'leitura' | 'form' | 'plano'>(temLeitura ? 'leitura' : 'form');
+  const [fora, setFora] = useState<any[]>([]); const [ajPlano, setAjPlano] = useState<any[] | null>(null);
   const [ver, setVer] = useState(versions.length ? versions[versions.length - 1].n : 0);
   const [busy, setBusy] = useState(''); const [erro, setErro] = useState(''); const [aviso, setAviso] = useState('');
   const [aj, setAj] = useState<string[]>([]); const [ajTxt, setAjTxt] = useState(''); const [ajTirar, setAjTirar] = useState(''); const [ajArrumar, setAjArrumar] = useState('');
@@ -65,6 +72,19 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
     const r = await fetch('/api/enquadrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ photo_id: photo.id, n: ver, geo }) });
     const j = await r.json().catch(() => ({ error: 'Falha no ajuste.' })); setBusy('');
     if (!r.ok) return setErro(j.error); location.reload();
+  };
+  // Lê o texto livre olhando a foto e devolve ações concretas para o cliente conferir. Não gera imagem.
+  const interpretar = async (t: { retirar?: string; melhorar?: string; ajuste?: string }) => {
+    try {
+      const r = await fetch('/api/plano', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ photo_id: photo.id, svc: a.svc, ...t }) });
+      const j = await r.json(); return Array.isArray(j.acoes) ? j.acoes : [];
+    } catch { return []; }
+  };
+  const revisar = async () => {
+    setErro(''); let acoes: any[] = [];
+    const t = { retirar: (a.retirar_txt || '').trim(), melhorar: (a.melhorar_txt || '').trim() };
+    if (t.retirar || t.melhorar) { setBusy('Lendo o seu pedido na foto… alguns segundos.'); acoes = await interpretar(t); setBusy(''); }
+    setFora(acoes.filter((x: any) => x.fora)); setA({ ...a, interpretado: acoes.filter((x: any) => !x.fora) }); setEtapa('plano'); window.scrollTo(0, 0);
   };
   const amb = a.svc === 'ambientar';
   const proxima = fila ? fila.split(',') : [];
@@ -102,8 +122,18 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
               {an.inventario?.length ? <small>{an.inventario.map((i: any) => `${i.qtd} ${i.item}`).join(' · ')}</small> : <small>Não identificamos o mobiliário em detalhe.</small>}
               {an.materiais?.length ? <small>Materiais: {an.materiais.join(', ')}.</small> : null}
             </div>
-            <div className="card"><b>O que está fora do lugar</b>
-              {arrumaveis.length ? <ul style={{ margin: 0, paddingLeft: 18 }}>{(an.arrumar || []).map((r: any) => <li key={r.nome}><small>{r.nome} — {r.acao}</small></li>)}</ul> : <small>Nada fora do lugar encontrado.</small>}
+            <div className="card"><b>Sugestões para a foto</b>
+              {arrumaveis.length ? <>
+                <small>É o que um fotógrafo arrumaria antes do clique, usando só o que já existe no espaço. Deixe marcado o que você quer que seja feito.</small>
+                {GRUPOS.filter(([g]) => (an.arrumar || []).some((r: any) => (GRUPOS.some(([k]) => k === r.grupo) ? r.grupo : 'outros') === g)).map(([g, titulo]) => <div className="q" key={g}><b style={{ fontSize: 13 }}>{titulo}</b>
+                  {g === 'defeitos' && <small>Vem desmarcado. Em anúncio de venda ou locação, a foto precisa corresponder ao estado real do imóvel: corrigir rachadura, infiltração ou mofo na imagem é responsabilidade de quem publica.</small>}
+                  {(an.arrumar || []).filter((r: any) => (GRUPOS.some(([k]) => k === r.grupo) ? r.grupo : 'outros') === g).map((r: any) => { const on = (a.arrumar || []).includes(r.nome); return (
+                    <label key={r.nome} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', cursor: 'pointer', padding: '6px 0' }}>
+                      <input type="checkbox" checked={on} style={{ marginTop: 4, width: 18, height: 18, flex: '0 0 auto' }} onChange={() => setA({ ...a, arrumar: on ? (a.arrumar || []).filter((x: string) => x !== r.nome) : [...(a.arrumar || []), r.nome] })} />
+                      <span><b style={{ fontWeight: 500 }}>{r.nome}</b><small style={{ display: 'block' }}>{r.acao}{r.motivo ? ` — ${r.motivo}` : ''}</small></span>
+                    </label>); })}
+                </div>)}
+              </> : <small>Nada fora do lugar encontrado.</small>}
             </div>
             <div className="card"><b>O que daria para tirar da cena</b>
               {removiveis.length ? <small>{removiveis.join(' · ')}</small> : <small>Nada solto encontrado.</small>}
@@ -116,6 +146,45 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
               {faltam > 0 && <small>{faltam === 1 ? 'Falta 1 resposta.' : `Faltam ${faltam} respostas.`} Você pode seguir sem responder.</small>}
             </div>}
             <button className="btn" onClick={() => setEtapa('form')}>Confirmar leitura e continuar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ——— passo 4: resumo do que será feito ———
+  if (!versions.length && etapa === 'plano') {
+    const pedidos = listaPedidos(an, a);
+    const itens: string[] = (a.adicionar || []);
+    const tirarInterp = (k: number) => setA({ ...a, interpretado: (a.interpretado || []).filter((_: any, i: number) => i !== k) });
+    const duvidas = (a.interpretado || []).filter((x: any) => x.duvida);
+    return (
+      <div className="stack">
+        <div className="mono">Nova foto · passo 4</div>
+        <h1>O que vamos fazer</h1>
+        <div className="split">
+          <div><img src={original} alt="Foto enviada" style={{ width: '100%', borderRadius: 8, display: 'block' }} /></div>
+          <div className="stack">
+            <div className="mono" style={{ textTransform: 'none', letterSpacing: 0 }}>Confira a lista. É exatamente isto que vai para a geração, e o resultado é conferido item por item.</div>
+            <div className="card"><b>{amb ? 'Ambientar' : 'Revelar'} · {INT_N[a.intensidade || 'editorial']} · {LUZ_N[a.luz]}</b>
+              <small>Enquadramento: {ENQ_N[a.enq]}. Pessoas, rostos e placas de carro saem sempre.</small>
+            </div>
+            <div className="card"><b>Mudanças na cena</b>
+              {pedidos.length ? <ol style={{ margin: 0, paddingLeft: 20 }}>{pedidos.map((p, i) => { const k = p.tipo === 'pedido' && (a.interpretado || []).length ? (a.interpretado || []).findIndex((x: any) => (x.resumo || x.acao) === p.cliente) : -1; return (
+                <li key={i} style={{ padding: '3px 0' }}><small style={{ color: 'inherit' }}>{p.cliente}{k >= 0 && <> <button type="button" onClick={() => tirarInterp(k)} style={{ border: 0, background: 'none', color: '#8a2be2', cursor: 'pointer', textDecoration: 'underline', padding: 0, font: 'inherit' }}>tirar da lista</button></>}</small></li>); })}</ol>
+                : <small>Nenhuma mudança na cena: só luz, cor e acabamento fotográfico.</small>}
+              {amb && <small>{itens.length ? `Entram na foto: ${itens.map((i: string) => (a.posicoes || {})[i] ? `${i} (posição marcada)` : `${i} (posição livre)`).join(', ')}. Estilo ${a.estilo}, paleta ${a.paleta}, decoração ${String(a.densidade || '').toLowerCase()}.` : `Nenhum móvel novo: só objetos pequenos de cena, no estilo ${a.estilo}, paleta ${a.paleta}.`}</small>}
+            </div>
+            {duvidas.length > 0 && <div className="alert">Lemos assim o que você escreveu. Se não for isso, volte e reescreva: {duvidas.map((x: any) => x.duvida).join(' ')}</div>}
+            {fora.length > 0 && <div className="alert">Ficou de fora, porque muda material, cor ou modelo do que existe{amb ? '' : ' ou acrescenta algo que não está na foto'}: {fora.map((x: any) => `${x.resumo}${x.motivo ? ` (${x.motivo})` : ''}`).join('; ')}.</div>}
+            <div className="card"><b>O que não muda</b>
+              <small>Arquitetura, materiais, cores e os móveis que já existem{a.nao_mudar ? `; e também: ${a.nao_mudar}` : ''}. O que for movido continua sendo a mesma peça.</small>
+            </div>
+            {erro && <div className="erro">{erro}</div>}
+            {busy ? <div className="ok">{busy}</div> : <div className="row">
+              <button className="btn sec" onClick={() => setEtapa('form')}>Voltar e corrigir</button>
+              <button className="btn" onClick={() => gerar()}>Confirmar e gerar</button>
+            </div>}
           </div>
         </div>
       </div>
@@ -164,7 +233,7 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             {erro && <div className="erro">{erro}</div>}
             {busy ? <div className="ok">{busy}</div> : <div className="row">
               {temLeitura && <button className="btn sec" onClick={() => setEtapa('leitura')}>Voltar à leitura</button>}
-              <button className="btn" onClick={() => gerar()}>Gerar foto</button>
+              <button className="btn" onClick={revisar}>Revisar e gerar</button>
             </div>}
           </div>
         </div>
@@ -180,7 +249,19 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
   const geoEscolhido = GEO.find(([, k]) => k === geoSel);
   // Só geometria = refeito por código, sem custo. Com texto = nova geração, já com o enquadramento escolhido.
   const soGeometria = !ajusteTexto && !!geoEscolhido;
-  const aplicar = () => { if (soGeometria) return enquadrar(geoEscolhido![2]); return gerar(ajusteTexto, geoEscolhido ? geoEscolhido[2] : undefined); };
+  const temLivre = !!(ajTirar.trim() || ajArrumar.trim() || ajTxt.trim());
+  // Ajuste escrito à mão passa pela leitura na foto e o cliente confirma antes de gerar.
+  const aplicar = async () => {
+    if (soGeometria) return enquadrar(geoEscolhido![2]);
+    if (!temLivre) return gerar(ajusteTexto, geoEscolhido ? geoEscolhido[2] : undefined);
+    setErro(''); setBusy('Lendo o seu pedido na foto… alguns segundos.');
+    const acoes = await interpretar({ retirar: ajTirar.trim(), melhorar: ajArrumar.trim(), ajuste: ajTxt.trim() }); setBusy('');
+    if (!acoes.length) return gerar(ajusteTexto, geoEscolhido ? geoEscolhido[2] : undefined);
+    setAjPlano(acoes);
+  };
+  const ajValidos = (ajPlano || []).filter((x: any) => !x.fora);
+  const confirmarAjuste = () => { const txt = [...aj, ...ajValidos.map((x: any) => x.acao)].join('; '); setAjPlano(null); return gerar(txt, geoEscolhido ? geoEscolhido[2] : undefined); };
+  const pendentes: string[] = atual.check?.pedidos_pendentes || [];
   return (
     <div className="stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -195,7 +276,8 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
         <div className="stack">
           {atual.check && (atual.check.ponto_fraco && (atual.check.cor_desviada || atual.check.menos_nitida || !atual.check.contagem_ok || atual.check.objeto_nao_pedido || atual.check.modelo_trocado || atual.check.arquitetura_alterada || atual.check.enquadramento_alterado)
             ? <div className="alert">Esta foto teve dificuldade em: {atual.check.ponto_fraco}. Um ajuste pode resolver.</div>
-            : <div className="ok">Checagem: cor, nitidez, contagem e arquitetura aprovadas.</div>)}
+            : pendentes.length ? null : <div className="ok">Checagem: cor, nitidez, contagem, arquitetura e pedidos aprovados.</div>)}
+          {pendentes.length > 0 && <div className="alert">Nesta versão não saiu como pedido: {pendentes.join('; ')}. Um ajuste dizendo exatamente isso costuma resolver.</div>}
           <div className="card"><b>Prumo e enquadramento</b><small>Escolha uma opção e clique em “{soGeometria ? 'Aplicar enquadramento' : 'Gerar ajuste'}”, no bloco abaixo. Sozinho, o enquadramento é refeito por código, em segundos e sem custo.</small>
             <div className="chips">{GEO.map(([l, k]) => <button key={k} type="button" className="chip" aria-pressed={geoSel === k} disabled={!!busy} onClick={() => setGeoSel(geoSel === k ? '' : k)}>{l}</button>)}</div>
           </div>
@@ -206,7 +288,16 @@ export default function Foto({ photo, original, versions, saldo, fila }: any) {
             <label className="f">O que arrumar, alinhar ou melhorar<textarea rows={2} style={{ font: 'inherit', padding: 12, borderRadius: 6, border: '1px solid #5c5852' }} placeholder="ex.: alinhar móveis e eletrodomésticos, fechar portas e gavetas, endireitar o que estiver torto" value={ajArrumar} onChange={e => setAjArrumar(e.target.value)} /></label>
             <input type="text" placeholder="Outro detalhe (opcional)" value={ajTxt} onChange={e => setAjTxt(e.target.value)} />
             {geoEscolhido && <small>Enquadramento escolhido: {geoEscolhido[0]}.{ajusteTexto ? ' Entra junto com o ajuste, numa única geração.' : ''}</small>}
-            <button className="btn sec" disabled={(!ajusteTexto && !geoEscolhido) || !!busy} onClick={aplicar}>{soGeometria ? 'Aplicar enquadramento (sem custo)' : 'Gerar ajuste'}</button>
+            {ajPlano
+              ? <div className="stack" style={{ gap: 8 }}>
+                <div className="alert"><b>Lemos o seu pedido assim:</b>
+                  <ol style={{ margin: '6px 0 0', paddingLeft: 20 }}>{[...aj, ...ajValidos.map((x: any) => x.resumo)].map((t: string, i: number) => <li key={i}>{t}</li>)}</ol>
+                  {ajValidos.filter((x: any) => x.duvida).map((x: any, i: number) => <div key={i}>{x.duvida}</div>)}
+                  {(ajPlano || []).filter((x: any) => x.fora).length > 0 && <div>Ficou de fora, porque muda material, cor ou modelo do que existe: {(ajPlano || []).filter((x: any) => x.fora).map((x: any) => x.resumo).join('; ')}.</div>}
+                </div>
+                <div className="row"><button className="btn" disabled={!!busy || (!aj.length && !ajValidos.length)} onClick={confirmarAjuste}>Confirmar e gerar ajuste</button><button className="btn sec" disabled={!!busy} onClick={() => setAjPlano(null)}>Reescrever</button></div>
+              </div>
+              : <button className="btn sec" disabled={(!ajusteTexto && !geoEscolhido) || !!busy} onClick={aplicar}>{soGeometria ? 'Aplicar enquadramento (sem custo)' : temLivre ? 'Revisar ajuste' : 'Gerar ajuste'}</button>}
           </div>
           <div className="card"><b>Entrega</b>
             <small>Original em 4K{(photo.answers?.formatos || []).length ? ' + ' + photo.answers.formatos.map((f: string) => FMT_N[f]).join(', ') : ''}, cada um em JPG.{photo.service === 'ambientar' ? ' Em anúncio de imóvel, a recomendação é indicar que a decoração é ilustrativa.' : ''}</small>
