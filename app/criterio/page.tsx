@@ -47,7 +47,7 @@ export default function Criterio() {
         <h2>Veja nas imagens</h2>
         <div className="row">
           <Link className="btn" href="/#provas">Ver os antes e depois</Link>
-          <Link className="btn sec" href="/entrar">Testar com 3 fotos grátis</Link>
+          <a className="btn sec" href="https://wa.me/5548998125929?text=Oi%2C%20Filipe.%20Vim%20pelo%20site%20da%20Lucida%20Room%20e%20quero%20tratar%20fotos." target="_blank" rel="noopener">Pedir pelo WhatsApp</a>
         </div>
       </section>
     </>
