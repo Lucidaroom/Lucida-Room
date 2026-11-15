@@ -18,10 +18,11 @@ export type Analysis = {
   foco?: number[] | null;
   arrumar?: { nome: string; acao: string; grupo?: string; motivo?: string; padrao?: boolean; caixa?: [number, number, number, number] }[];
   perguntas?: { pergunta: string; opcoes: string[] }[];
+  superficies?: import('./acabamentos').Superficie[];   // lida sob demanda no serviço "Trocar acabamentos"
 };
 
 export type Answers = {
-  svc: 'revelar' | 'ambientar';
+  svc: 'revelar' | 'ambientar' | 'acabamentos';
   enq: 'manter' | 'verticais' | 'justo' | 'centralizar';
   luz: 'claro' | 'suave' | 'tarde' | 'noite' | 'manter';
   remover: string[];           // nomes vindos de analysis.removiveis
@@ -36,6 +37,7 @@ export type Answers = {
   respostas?: Record<string, string>; // pergunta da análise -> opção escolhida pelo cliente
   refs?: string[];             // nomes dos itens que vão como recorte de referência, na ordem
   interpretado?: { acao: string; resumo?: string; tipo?: string }[]; // texto livre já convertido em ações concretas e confirmado pelo cliente
+  acabamentos?: { superficie: string; opcao: string }[]; // superfície marcada na lista -> opção de cor/material escolhida
 };
 
 export const ANALYSIS_PROMPT = `Você é um fotógrafo de arquitetura e um produtor de cena. Analise a foto e responda SOMENTE em JSON com esta forma:
